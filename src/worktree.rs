@@ -29,7 +29,7 @@ impl Worktree {
 
 /// Errors from worktree operations
 #[derive(Debug, Error)]
-pub(crate) enum WorktreeError {
+pub enum WorktreeError {
     #[error("Git command failed: {0}")]
     GitError(String),
     #[error("IO error: {0}")]
@@ -92,7 +92,7 @@ fn parse_porcelain(input: &str) -> Vec<Worktree> {
 ///
 /// The `GWT_GIT` environment variable can be used to override the `git` executable
 /// (useful for tests to inject a mock git program).
-pub(crate) fn list_worktrees() -> Result<Vec<Worktree>, WorktreeError> {
+pub fn list_worktrees() -> Result<Vec<Worktree>, WorktreeError> {
     let git_cmd = std::env::var("GWT_GIT").unwrap_or_else(|_| "git".to_string());
 
     let output = Command::new(&git_cmd)
@@ -110,7 +110,10 @@ pub(crate) fn list_worktrees() -> Result<Vec<Worktree>, WorktreeError> {
 }
 
 /// Find a worktree by branch name from a slice of worktrees
-pub(crate) fn find_worktree_for_branch<'a>(worktrees: &'a [Worktree], branch: &str) -> Option<&'a Worktree> {
+pub fn find_worktree_for_branch<'a>(
+    worktrees: &'a [Worktree],
+    branch: &str,
+) -> Option<&'a Worktree> {
     worktrees.iter().find(|w| match &w.branch {
         Some(b) => b == branch,
         None => false,

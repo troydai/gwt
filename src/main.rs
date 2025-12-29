@@ -4,8 +4,7 @@ use clap::{Parser, Subcommand};
 use config::Config;
 use std::process::exit;
 
-use crate::worktree::{self, list_worktrees, find_worktree_for_branch, WorktreeError};
-use crate::shell::generate_init;
+use gwt::{list_worktrees, find_worktree_for_branch, WorktreeError, generate_init};
 
 #[derive(Parser)]
 #[command(name = "gwt")]
@@ -58,40 +57,36 @@ fn main() {
             println!("Current configuration:");
             println!("Worktree root: {}", config.worktree_root.display());
         }
-        Commands::Switch { branch } => {
-            match list_worktrees() {
-                Ok(wts) => match find_worktree_for_branch(&wts, branch) {
-                    Some(w) => {
-                        println!("{}", w.path().display());
-                        exit(0);
-                    }
-                    None => {
-                        eprintln!("Worktree for branch {} doesn't exist.", branch);
-                        exit(1);
-                    }
-                },
-                Err(e) => match e {
-                    WorktreeError::GitError(s) => {
-                        eprintln!("Git error: {}", s);
-                        exit(1);
-                    }
-                    _ => {
-                        eprintln!("Error listing worktrees: {}", e);
-                        exit(1);
-                    }
-                },
-            }
-        }
-        Commands::Init { shell } => {
-            match generate_init(shell) {
-                Ok(s) => {
-                    println!("{}", s);
+        Commands::Switch { branch } => match list_worktrees() {
+            Ok(wts) => match find_worktree_for_branch(&wts, branch) {
+                Some(w) => {
+                    println!("{}", w.path().display());
+                    exit(0);
                 }
-                Err(e) => {
-                    eprintln!("{}", e);
+                None => {
+                    eprintln!("Worktree for branch {} doesn't exist.", branch);
                     exit(1);
                 }
+            },
+            Err(e) => match e {
+                WorktreeError::GitError(s) => {
+                    eprintln!("Git error: {}", s);
+                    exit(1);
+                }
+                _ => {
+                    eprintln!("Error listing worktrees: {}", e);
+                    exit(1);
+                }
+            },
+        },
+        Commands::Init { shell } => match generate_init(shell) {
+            Ok(s) => {
+                println!("{}", s);
             }
-        }
+            Err(e) => {
+                eprintln!("{}", e);
+                exit(1);
+            }
+        },
     }
 }

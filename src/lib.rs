@@ -1,5 +1,6 @@
-mod worktree;
 mod shell;
+mod worktree;
 
-// Library internal modules - not publicly re-exported to keep the surface minimal.
-// Public API is intentionally limited; the binary `gwtree` is the primary interface.
+// Re-export a minimal set of symbols for the binary to use.
+pub use worktree::{Worktree, WorktreeError, list_worktrees, find_worktree_for_branch};
+pub use shell::generate_init;

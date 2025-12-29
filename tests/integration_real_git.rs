@@ -2,8 +2,8 @@ use assert_cmd::Command;
 use predicates::prelude::*;
 use std::fs::{self, File};
 use std::io::Write;
-use tempfile::tempdir;
 use std::path::Path;
+use tempfile::tempdir;
 
 fn run_git(dir: &Path, args: &[&str]) {
     let status = std::process::Command::new("git")
@@ -41,10 +41,19 @@ fn switch_real_worktree_success() {
 
     // create worktree for feature branch
     let wt_dir = tmp.path().join("wt_feature");
-    run_git(&repo_dir, &["worktree", "add", wt_dir.to_str().unwrap(), "feature-branch"]);
+    run_git(
+        &repo_dir,
+        &[
+            "worktree",
+            "add",
+            wt_dir.to_str().unwrap(),
+            "feature-branch",
+        ],
+    );
 
     // run gwtree switch from repo dir - should print the worktree path
-    let mut cmd = Command::cargo_bin("gwtree").unwrap();
+    let bin = std::env::var_os("CARGO_BIN_EXE_gwtree").expect("CARGO_BIN_EXE_gwtree not set");
+    let mut cmd = Command::new(bin);
     cmd.current_dir(&repo_dir)
         .arg("switch")
         .arg("feature-branch")
@@ -71,19 +80,24 @@ fn switch_real_worktree_not_found() {
     run_git(&repo_dir, &["add", "README.md"]);
     run_git(&repo_dir, &["commit", "-m", "initial"]);
 
-    let mut cmd = Command::cargo_bin("gwtree").unwrap();
+    let bin = std::env::var_os("CARGO_BIN_EXE_gwtree").expect("CARGO_BIN_EXE_gwtree not set");
+    let mut cmd = Command::new(bin);
     cmd.current_dir(&repo_dir)
         .arg("switch")
         .arg("no-such-branch")
         .assert()
         .failure()
-        .stderr(predicate::str::contains("Worktree for branch no-such-branch doesn't exist."));
+        .stderr(predicate::str::contains(
+            "Worktree for branch no-such-branch doesn't exist.",
+        ));
 }
 
 #[test]
 fn init_real_prints_shell_function() {
-    let mut cmd = Command::cargo_bin("gwtree").unwrap();
-    cmd.arg("init").arg("bash")
+    let bin = std::env::var_os("CARGO_BIN_EXE_gwtree").expect("CARGO_BIN_EXE_gwtree not set");
+    let mut cmd = Command::new(bin);
+    cmd.arg("init")
+        .arg("bash")
         .assert()
         .success()
         .stdout(predicate::str::contains("gwt() {"));

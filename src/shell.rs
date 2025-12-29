@@ -1,5 +1,5 @@
 /// Generate shell integration function for supported shells
-pub(crate) fn generate_init(shell: &str) -> Result<String, String> {
+pub fn generate_init(shell: &str) -> Result<String, String> {
     match shell {
         "bash" | "zsh" => Ok(r#"gwt() {
     if [ "$1" = "switch" ]; then
@@ -18,7 +18,8 @@ pub(crate) fn generate_init(shell: &str) -> Result<String, String> {
         command gwtree "$@"
     fi
 }
-"#.to_string()),
+"#
+        .to_string()),
         "fish" => Ok(r#"function gwt
     if test "$argv[1]" = "switch"
         set result (command gwtree switch (echo $argv | sed 's/^switch //'))
@@ -35,8 +36,12 @@ pub(crate) fn generate_init(shell: &str) -> Result<String, String> {
         command gwtree $argv
     end
 end
-"#.to_string()),
-        _ => Err(format!("Unsupported shell '{}'. Supported: bash, zsh, fish", shell)),
+"#
+        .to_string()),
+        _ => Err(format!(
+            "Unsupported shell '{}'. Supported: bash, zsh, fish",
+            shell
+        )),
     }
 }
 

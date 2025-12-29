@@ -29,7 +29,8 @@ fn switch_success_prints_path_and_exit_0() {
     let output = "worktree /tmp/path/to/feature\nHEAD def456\nbranch refs/heads/feature-branch\n";
     let git_mock = make_mock_git(output, 0);
 
-    let mut cmd = Command::cargo_bin("gwtree").unwrap();
+    let bin = std::env::var_os("CARGO_BIN_EXE_gwtree").expect("CARGO_BIN_EXE_gwtree not set");
+    let mut cmd = Command::new(bin);
     cmd.env("GWT_GIT", git_mock)
         .arg("switch")
         .arg("feature-branch")
@@ -43,13 +44,16 @@ fn switch_not_found_exits_1_and_prints_error() {
     let output = "worktree /tmp/path/to/main\nHEAD abc123\nbranch refs/heads/main\n";
     let git_mock = make_mock_git(output, 0);
 
-    let mut cmd = Command::cargo_bin("gwtree").unwrap();
+    let bin = std::env::var_os("CARGO_BIN_EXE_gwtree").expect("CARGO_BIN_EXE_gwtree not set");
+    let mut cmd = Command::new(bin);
     cmd.env("GWT_GIT", git_mock)
         .arg("switch")
         .arg("feature-branch")
         .assert()
         .failure()
-        .stderr(predicate::str::contains("Worktree for branch feature-branch doesn't exist."));
+        .stderr(predicate::str::contains(
+            "Worktree for branch feature-branch doesn't exist.",
+        ));
 }
 
 #[test]
@@ -57,7 +61,8 @@ fn git_error_propagates_and_exits_1() {
     let output = "fatal: repository not found";
     let git_mock = make_mock_git(output, 1);
 
-    let mut cmd = Command::cargo_bin("gwtree").unwrap();
+    let bin = std::env::var_os("CARGO_BIN_EXE_gwtree").expect("CARGO_BIN_EXE_gwtree not set");
+    let mut cmd = Command::new(bin);
     cmd.env("GWT_GIT", git_mock)
         .arg("switch")
         .arg("feature-branch")
@@ -68,8 +73,10 @@ fn git_error_propagates_and_exits_1() {
 
 #[test]
 fn init_prints_shell_function_and_exits_0() {
-    let mut cmd = Command::cargo_bin("gwtree").unwrap();
-    cmd.arg("init").arg("bash")
+    let bin = std::env::var_os("CARGO_BIN_EXE_gwtree").expect("CARGO_BIN_EXE_gwtree not set");
+    let mut cmd = Command::new(bin);
+    cmd.arg("init")
+        .arg("bash")
         .assert()
         .success()
         .stdout(predicate::str::contains("gwt() {"));
