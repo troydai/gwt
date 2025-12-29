@@ -1,4 +1,5 @@
 use clap::Subcommand;
+use console::Style;
 
 use crate::config;
 
@@ -23,15 +24,22 @@ pub fn handle_config_command(cmd: &ConfigCommands) -> Result<(), ConfigCommandEr
     
     let config_path = config::config_file_path()?;
 
-    println!("Config file path: {}", config_path.display());
+    let label_style = Style::new().cyan().bright();
+    let path_style = Style::new().yellow();
+    println!(
+        "{} {}",
+        label_style.apply_to("Config file path:"),
+        path_style.apply_to(config_path.display())
+    );
 
     if !config_path.exists() {
         return Err(ConfigCommandError::ConfigNotFound(config_path));
     }
 
     let contents = std::fs::read_to_string(&config_path)?;
-    println!("\nConfig file contents:");
-    println!("{}", contents);
+    let contents_style = Style::new().white().bright();
+    println!("\n{}", label_style.apply_to("Config file contents:"));
+    println!("{}", contents_style.apply_to(contents));
 
     Ok(())
 }
