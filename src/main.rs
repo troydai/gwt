@@ -1,5 +1,5 @@
-mod config;
 mod command;
+mod config;
 
 use clap::{Parser, Subcommand};
 use config::Config;
@@ -84,7 +84,7 @@ fn main() {
                     }
                 },
             }
-        },
+        }
         Commands::Init { shell } => match generate_init(shell) {
             Ok(s) => {
                 println!("{}", s);
