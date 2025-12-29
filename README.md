@@ -18,13 +18,13 @@ The tool consists of two components:
 
 The shell function is required because changing the current working directory must be done by the shell itself (a subprocess cannot change the parent shell's directory).
 
-### Build
+### Build and Install
 
 ```bash
-cargo build --release
+make install
 ```
 
-This produces the `gwtree` binary in `target/release/`.
+This builds the release binary and installs `gwtree` to your Cargo bin directory (typically `~/.cargo/bin`).
 
 ### Shell Integration
 
@@ -46,7 +46,7 @@ Install the binary and enable shell integration:
 1. Install the binary:
 
 ```bash
-cargo install --path .
+make install
 ```
 
 2. Add shell integration by evaluating the init output in your shell startup file (e.g., `~/.bashrc`, `~/.zshrc`):
