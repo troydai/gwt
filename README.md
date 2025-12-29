@@ -67,6 +67,11 @@ This project uses [pre-commit](https://pre-commit.com/) to ensure code quality.
 
 2. Install the git hooks:
    ```bash
+   make setup-pre-commit
+   ```
+
+   Alternatively, you can run:
+   ```bash
    pre-commit install
    ```
 
