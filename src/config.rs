@@ -1,4 +1,5 @@
-use dialoguer::{Confirm, Input};
+use console::Style;
+use dialoguer::{Confirm, Input, theme::ColorfulTheme};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
@@ -7,6 +8,17 @@ use thiserror::Error;
 const DEFAULT_WORKTREE_ROOT: &str = ".gwt_store";
 const CONFIG_DIR_NAME: &str = ".gwt";
 const CONFIG_FILE_NAME: &str = "config.toml";
+
+/// Returns a configured ColorfulTheme with bright colors for interactive prompts
+fn prompt_theme() -> ColorfulTheme {
+    ColorfulTheme {
+        prompt_style: Style::new().cyan().bright(),
+        prompt_prefix: Style::new().cyan().bright().apply_to("?".to_string()),
+        success_prefix: Style::new().green().bright().apply_to("✔".to_string()),
+        values_style: Style::new().cyan().bright(),
+        ..ColorfulTheme::default()
+    }
+}
 
 #[derive(Error, Debug)]
 pub enum ConfigError {
@@ -91,7 +103,7 @@ impl Config {
 
         println!("gwt configuration not found at {}", config_path.display());
 
-        let should_create = Confirm::new()
+        let should_create = Confirm::with_theme(&prompt_theme())
             .with_prompt("Would you like to create a configuration file now?")
             .default(true)
             .interact()
@@ -105,7 +117,7 @@ impl Config {
             .map(|c| c.worktree_root)
             .unwrap_or_else(|_| PathBuf::from(format!("~/{}", DEFAULT_WORKTREE_ROOT)));
 
-        let worktree_root: String = Input::new()
+        let worktree_root: String = Input::with_theme(&prompt_theme())
             .with_prompt("Worktree root directory")
             .default(default_root.to_string_lossy().to_string())
             .interact_text()
@@ -133,7 +145,7 @@ impl Config {
     /// Ensure the worktree root directory exists
     pub fn ensure_worktree_root(&self) -> Result<(), ConfigError> {
         if !self.worktree_root.exists() {
-            let should_create = Confirm::new()
+            let should_create = Confirm::with_theme(&prompt_theme())
                 .with_prompt(format!(
                     "Worktree root '{}' does not exist. Create it?",
                     self.worktree_root.display()
