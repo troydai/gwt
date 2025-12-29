@@ -1,4 +1,7 @@
+mod config;
+
 use clap::{Parser, Subcommand};
+use config::Config;
 
 #[derive(Parser)]
 #[command(name = "gwt")]
@@ -15,11 +18,24 @@ enum Commands {
 }
 
 fn main() {
+    let config = match Config::init() {
+        Ok(config) => config,
+        Err(config::ConfigError::SetupCancelled) => {
+            eprintln!("Setup cancelled. Run gwt again to configure.");
+            std::process::exit(1);
+        }
+        Err(e) => {
+            eprintln!("Configuration error: {}", e);
+            std::process::exit(1);
+        }
+    };
+
     let cli = Cli::parse();
 
     match &cli.command {
         Commands::Config => {
-            println!("Config command executed");
+            println!("Current configuration:");
+            println!("Worktree root: {}", config.worktree_root.display());
         }
     }
 }

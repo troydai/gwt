@@ -10,6 +10,36 @@ GWT streamlines this workflow by providing a unified interface for creating, nav
 
 This project is currently under active development.
 
+## User Manual
+
+### Configuration
+
+`gwt` uses a central configuration file to manage settings.
+
+- **Location**: `~/.gwt/config.toml`
+- **Format**: TOML
+
+#### First-time Setup
+
+When you run `gwt` for the first time, it will prompt you to create a configuration file interactively.
+
+1.  **Create Configuration File**: Confirm to create the file.
+2.  **Worktree Root**: Specify the directory where you want to store your worktrees. The default is `~/.gwt_store`.
+
+#### Configuration Options
+
+Currently, the configuration supports the following option:
+
+- `worktree_root`: The absolute path to the directory where all git worktrees will be stored.
+
+**Example `config.toml`:**
+
+```toml
+worktree_root = "/Users/username/.gwt_store"
+```
+
+You can manually edit this file to change the worktree root location.
+
 ## Planned Features
 
 - **Centralized Configuration**: Define a root directory for all worktrees.
