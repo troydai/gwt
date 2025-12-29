@@ -30,6 +30,11 @@ fn main() {
         }
     };
 
+    if let Err(e) = config.ensure_worktree_root() {
+        eprintln!("Error ensuring worktree root exists: {}", e);
+        std::process::exit(1);
+    }
+
     let cli = Cli::parse();
 
     match &cli.command {

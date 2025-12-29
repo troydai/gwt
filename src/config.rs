@@ -1,8 +1,8 @@
-use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
-use std::fs;
-use thiserror::Error;
 use dialoguer::{Confirm, Input};
+use serde::{Deserialize, Serialize};
+use std::fs;
+use std::path::PathBuf;
+use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum ConfigError {
@@ -68,8 +68,7 @@ impl Config {
             fs::create_dir_all(&dir)?;
         }
         let path = config_file_path();
-        let contents = toml::to_string_pretty(self)
-            .map_err(ConfigError::SerializeError)?;
+        let contents = toml::to_string_pretty(self).map_err(ConfigError::SerializeError)?;
         fs::write(&path, contents)?;
         Ok(())
     }
@@ -118,7 +117,7 @@ impl Config {
             Err(e) => Err(e),
         }
     }
-    
+
     /// Ensure the worktree root directory exists
     pub fn ensure_worktree_root(&self) -> Result<(), ConfigError> {
         if !self.worktree_root.exists() {
@@ -157,7 +156,12 @@ mod tests {
     #[test]
     fn test_config_default() {
         let config = Config::default();
-        assert!(config.worktree_root.to_string_lossy().contains(".gwt_store"));
+        assert!(
+            config
+                .worktree_root
+                .to_string_lossy()
+                .contains(".gwt_store")
+        );
     }
 
     #[test]
