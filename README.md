@@ -39,6 +39,110 @@ gwt() {
 
 ## User Manual
 
+### Quickstart ✅
+
+Install the binary and enable shell integration:
+
+1. Install the binary:
+
+```bash
+cargo install --path .
+```
+
+2. Add shell integration by evaluating the init output in your shell startup file (e.g., `~/.bashrc`, `~/.zshrc`):
+
+```bash
+# For bash or zsh
+eval "$(gwtree init bash)"
+
+# For fish
+eval (gwtree init fish)
+```
+
+Reload your shell (or open a new terminal) and you're ready to go.
+
+---
+
+### Commands
+
+- `gwtree switch <branch>` — If a worktree already exists for `<branch>`, prints the worktree path to stdout and exits 0. If no worktree exists for that branch, prints an error message to stderr and exits with code 1.
+
+Example (existing worktree):
+
+```bash
+$ gwt switch feature-branch
+/path/to/worktrees/feature-branch
+$ echo $?
+0
+```
+
+Example (missing worktree):
+
+```bash
+$ gwt switch no-such-branch
+Worktree for branch no-such-branch doesn't exist.
+$ echo $?
+1
+```
+
+- `gwtree init <shell>` — Print the shell code that provides the `gwt` wrapper function for the specified shell (`bash`, `zsh`, or `fish`). The wrapper calls the `gwtree` binary and performs `cd` on success for `switch` commands.
+
+Example:
+
+```bash
+$ gwtree init bash
+# prints shell function which you can `eval` in your shell
+```
+
+---
+
+### Shell Integration Details
+
+Why a shell wrapper?
+
+A process cannot change the working directory of its parent shell. To get the 'cd' behavior shown in usage, the `gwt` wrapper must run in the current shell. `gwtree init <shell>` prints a shell function that the user should `eval` in their shell startup files.
+
+Bash / Zsh example (what `gwtree init bash` prints):
+
+```bash
+gwt() {
+  if [ "$1" = "switch" ]; then
+    local result
+    result=$(command gwtree switch "${@:2}")
+    local exit_code=$?
+    if [ $exit_code -eq 0 ]; then
+      cd "$result" || return 1
+    else
+      echo "$result" >&2
+      return $exit_code
+    fi
+  else
+    command gwtree "$@"
+  fi
+}
+```
+
+Fish example (what `gwtree init fish` prints):
+
+```fish
+function gwt
+  if test "$argv[1]" = "switch"
+    set result (command gwtree switch (echo $argv | sed 's/^switch //'))
+    set exit_code $status
+    if test $exit_code -eq 0
+      cd "$result"; or return 1
+    else
+      echo $result >&2
+      return $exit_code
+    end
+  else
+    command gwtree $argv
+  end
+end
+```
+
+---
+
 ### Configuration
 
 `gwt` uses a central configuration file to manage settings.
@@ -66,6 +170,26 @@ worktree_root = "/Users/username/.gwt_store"
 ```
 
 You can manually edit this file to change the worktree root location.
+
+---
+
+### Testing & Development Tips 🧪
+
+- Run unit & integration tests:
+
+```bash
+cargo test
+```
+
+- Integration tests require `git` available on PATH and will create temporary repositories and worktrees; they run in temporary directories and do not affect your local repos.
+
+- There is a testing hook to mock the `git` executable in integration tests by setting the `GWT_GIT` environment variable to point to a mock script. This is used in `tests/integration_switch.rs`.
+
+- Use `cargo run -- <command>` to try the binary locally without installing.
+
+---
+
+If you'd like, we can add more examples (creating and removing worktrees, listing, etc.) as those commands are implemented.
 
 ## Planned Features
 
