@@ -16,8 +16,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@master
         with:
+          toolchain: 1.92
           components: rustfmt
       - name: Check formatting
         run: cargo fmt --all -- --check
@@ -28,8 +29,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@master
         with:
+          toolchain: 1.92
           components: clippy
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
@@ -42,7 +44,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.92
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
       - name: Build
