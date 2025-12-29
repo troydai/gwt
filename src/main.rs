@@ -4,7 +4,7 @@ use clap::{Parser, Subcommand};
 use config::Config;
 use std::process::exit;
 
-use gwt::{list_worktrees, find_worktree_for_branch, WorktreeError, generate_init};
+use gwt::{WorktreeError, find_worktree_for_branch, generate_init, list_worktrees};
 
 #[derive(Parser)]
 #[command(name = "gwt")]
