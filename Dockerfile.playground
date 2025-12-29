@@ -1,0 +1,44 @@
+# Stage 1: Build the binary
+FROM rust:1.83-slim-bookworm AS builder
+
+WORKDIR /build
+
+# Copy manifests first for better caching
+COPY Cargo.toml Cargo.lock ./
+COPY src/ src/
+
+# Build release binary
+RUN cargo build --release
+
+# Stage 2: Runtime image
+FROM debian:bookworm-slim
+
+LABEL org.opencontainers.image.description="GWT playground environment for testing"
+LABEL org.opencontainers.image.source="https://github.com/troydai/gwt"
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    bash \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy binary from builder
+COPY --from=builder /build/target/release/gwtree /usr/local/bin/gwtree
+
+# Create non-root user
+RUN useradd -m -s /bin/bash developer
+
+# Switch to non-root user
+USER developer
+WORKDIR /home/developer
+
+# Configure git (required for git operations)
+RUN git config --global user.email "developer@playground.local" \
+    && git config --global user.name "Developer"
+
+# Set up shell integration
+RUN echo 'eval "$(gwtree init bash)"' >> ~/.bashrc
+
+CMD ["/bin/bash"]
