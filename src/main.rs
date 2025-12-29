@@ -38,7 +38,12 @@ fn main() {
     let cli = Cli::parse();
 
     match &cli.command {
-        Commands::Config(config_cmd) => command::config::handle_config_command(config_cmd),
+        Commands::Config(config_cmd) => {
+            if let Err(e) = command::config::handle_config_command(config_cmd) {
+                eprintln!("{}", e);
+                exit(1);
+            }
+        }
         Commands::Switch { branch } => {
             let config = match Config::init() {
                 Ok(config) => config,

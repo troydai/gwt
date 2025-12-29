@@ -1,5 +1,4 @@
 use clap::Subcommand;
-use std::process::exit;
 
 use crate::config;
 
@@ -19,14 +18,7 @@ pub enum ConfigCommandError {
     ReadError(#[from] std::io::Error),
 }
 
-pub fn handle_config_command(cmd: &ConfigCommands) {
-    execute_config_command(cmd).unwrap_or_else(|e| {
-        eprintln!("{}", e);
-        exit(1);
-    });
-}
-
-fn execute_config_command(cmd: &ConfigCommands) -> Result<(), ConfigCommandError> {
+pub fn handle_config_command(cmd: &ConfigCommands) -> Result<(), ConfigCommandError> {
     match cmd {
         ConfigCommands::View => {
             let config_path = config::config_file_path()?;
