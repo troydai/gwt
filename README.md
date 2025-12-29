@@ -46,3 +46,38 @@ You can manually edit this file to change the worktree root location.
 - **Automated Navigation**: Seamlessly switch between worktrees with automatic directory changing.
 - **Rapid Lifecycle Management**: Efficient commands for creating and deleting worktrees.
 - **AI Integration**: Streamlined workflow to initialize a worktree and invoke an AI agent in a single step.
+
+## Development Setup
+
+This project uses [pre-commit](https://pre-commit.com/) to ensure code quality.
+
+### Prerequisites
+
+- [Rust](https://www.rust-lang.org/tools/install)
+- [pre-commit](https://pre-commit.com/#install)
+
+### Installation
+
+1. Install the pre-commit framework:
+   ```bash
+   pip install pre-commit
+   # or
+   brew install pre-commit
+   ```
+
+2. Install the git hooks:
+   ```bash
+   make setup-pre-commit
+   ```
+
+   Alternatively, you can run:
+   ```bash
+   pre-commit install
+   ```
+
+### Manual Usage
+
+You can run the checks manually at any time:
+```bash
+pre-commit run --all-files
+```
