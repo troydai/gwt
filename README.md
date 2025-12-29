@@ -94,6 +94,18 @@ $ gwtree init bash
 # prints shell function which you can `eval` in your shell
 ```
 
+- `gwtree config view` — Display the configuration file path and contents. This command shows where your config file is located and its current contents without triggering an interactive setup process.
+
+Example:
+
+```bash
+$ gwt config view
+Config file path: /home/user/.gwt/config.toml
+
+Config file contents:
+worktree_root = "/home/user/.gwt_store"
+```
+
 ---
 
 ### Shell Integration Details

@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file.
 - Implemented `gwtree switch <branch>` command which prints the path of an existing worktree for the specified branch and exits with 0; prints an error and exits 1 if not found. 🔧
 - Implemented `gwtree init <shell>` which emits shell-integration code for `bash`, `zsh`, and `fish` to allow `gwt` wrapper to `cd` into worktrees on success. 🔧
 - Added `make install` command for convenient local installation (macOS/Linux). 📦
+- Implemented `gwtree config view` command which displays the configuration file path and contents with colored output. This allows users to inspect their configuration without triggering an interactive setup process. 🎨
 
 ### Tests
 
@@ -22,6 +23,8 @@ All notable changes to this project will be documented in this file.
 - Reduced the public crate surface and encapsulated the `Worktree` struct fields behind accessors. 🔒
 - Moved unit tests inline to their corresponding source files for clearer locality. 🧪
 - Added testing helpers and dev-dependencies (`assert_cmd`, `predicates`) for robust integration testing. 🧰
+- Refactored config command logic into its own module (`src/command/config/mod.rs`) for better code organization. 🏗️
+- Added comprehensive unit tests for the config command module (7 new tests). ✅
 
 
 ---
