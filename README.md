@@ -10,6 +10,33 @@ GWT streamlines this workflow by providing a unified interface for creating, nav
 
 This project is currently under active development.
 
+## Installation
+
+The tool consists of two components:
+- `gwtree` - the compiled binary
+- `gwt` - a shell function that wraps `gwtree`
+
+The shell function is required because changing the current working directory must be done by the shell itself (a subprocess cannot change the parent shell's directory).
+
+### Build
+
+```bash
+cargo build --release
+```
+
+This produces the `gwtree` binary in `target/release/`.
+
+### Shell Integration
+
+Add the following to your shell configuration (e.g., `~/.bashrc` or `~/.zshrc`):
+
+```bash
+# gwt - Git Worktree Management
+gwt() {
+    gwtree "$@"
+}
+```
+
 ## User Manual
 
 ### Configuration
