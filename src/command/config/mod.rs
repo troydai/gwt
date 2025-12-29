@@ -19,23 +19,21 @@ pub enum ConfigCommandError {
 }
 
 pub fn handle_config_command(cmd: &ConfigCommands) -> Result<(), ConfigCommandError> {
-    match cmd {
-        ConfigCommands::View => {
-            let config_path = config::config_file_path()?;
+    let ConfigCommands::View = cmd;
+    
+    let config_path = config::config_file_path()?;
 
-            println!("Config file path: {}", config_path.display());
+    println!("Config file path: {}", config_path.display());
 
-            if !config_path.exists() {
-                return Err(ConfigCommandError::ConfigNotFound(config_path));
-            }
-
-            let contents = std::fs::read_to_string(&config_path)?;
-            println!("\nConfig file contents:");
-            println!("{}", contents);
-
-            Ok(())
-        }
+    if !config_path.exists() {
+        return Err(ConfigCommandError::ConfigNotFound(config_path));
     }
+
+    let contents = std::fs::read_to_string(&config_path)?;
+    println!("\nConfig file contents:");
+    println!("{}", contents);
+
+    Ok(())
 }
 
 #[cfg(test)]
