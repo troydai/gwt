@@ -1,0 +1,31 @@
+repos:
+  - repo: local
+    hooks:
+      - id: cargo-fmt
+        name: cargo fmt
+        description: Check if all rust files are formatted.
+        entry: cargo fmt --all -- --check
+        language: system
+        files: \.rs$
+        pass_filenames: false
+      - id: cargo-clippy
+        name: cargo clippy
+        description: Run clippy on all rust files.
+        entry: cargo clippy -- -D warnings
+        language: system
+        files: \.rs$
+        pass_filenames: false
+      - id: cargo-build
+        name: cargo build
+        description: Run cargo build.
+        entry: cargo build
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+      - id: cargo-test
+        name: cargo test
+        description: Run cargo test.
+        entry: cargo test
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
