@@ -18,64 +18,74 @@ pub enum ConfigError {
     InteractiveError(String),
     #[error("Setup cancelled by user")]
     SetupCancelled,
+    #[error("Could not determine home directory")]
+    HomeDirNotFound,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct Config {
     /// Root directory where all git worktrees will be stored
     pub worktree_root: PathBuf,
 }
 
-impl Default for Config {
-    fn default() -> Self {
-        // Default to ~/.gwt_store
-        let home = dirs::home_dir().expect("Could not determine home directory");
-        Self {
+impl Config {
+    pub fn new_default() -> Result<Self, ConfigError> {
+        let home = dirs::home_dir().ok_or(ConfigError::HomeDirNotFound)?;
+        Ok(Self {
             worktree_root: home.join(".gwt_store"),
-        }
+        })
     }
 }
 
 /// Returns the path to the gwt config directory (~/.gwt)
-pub fn config_dir() -> PathBuf {
+pub fn config_dir() -> Result<PathBuf, ConfigError> {
     dirs::home_dir()
-        .expect("Could not determine home directory")
-        .join(".gwt")
+        .ok_or(ConfigError::HomeDirNotFound)
+        .map(|p| p.join(".gwt"))
 }
 
 /// Returns the path to the config file (~/.gwt/config.toml)
-pub fn config_file_path() -> PathBuf {
-    config_dir().join("config.toml")
+pub fn config_file_path() -> Result<PathBuf, ConfigError> {
+    Ok(config_dir()?.join("config.toml"))
 }
 
 impl Config {
-    /// Load config from the default config file path
-    pub fn load() -> Result<Self, ConfigError> {
-        let path = config_file_path();
+    /// Load config from a specific path
+    pub fn load_from(path: &PathBuf) -> Result<Self, ConfigError> {
         if !path.exists() {
-            return Err(ConfigError::NotFound(path));
+            return Err(ConfigError::NotFound(path.clone()));
         }
-        let contents = fs::read_to_string(&path)?;
+        let contents = fs::read_to_string(path)?;
         let config: Config = toml::from_str(&contents)?;
         Ok(config)
+    }
+
+    /// Load config from the default config file path
+    pub fn load() -> Result<Self, ConfigError> {
+        Self::load_from(&config_file_path()?)
+    }
+
+    /// Save config to a specific path
+    pub fn save_to(&self, path: &PathBuf) -> Result<(), ConfigError> {
+        if let Some(parent) = path.parent() {
+            if !parent.exists() {
+                fs::create_dir_all(parent)?;
+            }
+        }
+        let contents = toml::to_string_pretty(self).map_err(ConfigError::SerializeError)?;
+        fs::write(path, contents)?;
+        Ok(())
     }
 
     /// Save config to the default config file path
     /// Creates the config directory if it doesn't exist
     pub fn save(&self) -> Result<(), ConfigError> {
-        let dir = config_dir();
-        if !dir.exists() {
-            fs::create_dir_all(&dir)?;
-        }
-        let path = config_file_path();
-        let contents = toml::to_string_pretty(self).map_err(ConfigError::SerializeError)?;
-        fs::write(&path, contents)?;
-        Ok(())
+        Self::save_to(self, &config_file_path()?)
     }
 
     /// Interactively prompt user to create initial configuration
     pub fn interactive_setup() -> Result<Self, ConfigError> {
-        let config_path = config_file_path();
+        let config_path = config_file_path()?;
 
         println!("gwt configuration not found at {}", config_path.display());
 
@@ -89,9 +99,9 @@ impl Config {
             return Err(ConfigError::SetupCancelled);
         }
 
-        let default_root = dirs::home_dir()
-            .map(|h| h.join(".gwt_store"))
-            .unwrap_or_else(|| PathBuf::from("~/.gwt_store"));
+        let default_root = Self::new_default()
+            .map(|c| c.worktree_root)
+            .unwrap_or_else(|_| PathBuf::from("~/.gwt_store"));
 
         let worktree_root: String = Input::new()
             .with_prompt("Worktree root directory")
@@ -154,14 +164,15 @@ mod tests {
     }
 
     #[test]
-    fn test_config_default() {
-        let config = Config::default();
-        assert!(
-            config
-                .worktree_root
-                .to_string_lossy()
-                .contains(".gwt_store")
-        );
+    fn test_new_default() {
+        if let Ok(config) = Config::new_default() {
+            assert!(
+                config
+                    .worktree_root
+                    .to_string_lossy()
+                    .contains(".gwt_store")
+            );
+        }
     }
 
     #[test]
@@ -172,5 +183,21 @@ mod tests {
         let toml_str = toml::to_string_pretty(&config).unwrap();
         assert!(toml_str.contains("worktree_root"));
         assert!(toml_str.contains("/test/path"));
+    }
+
+    #[test]
+    fn test_save_and_load_with_tempfile() {
+        let dir = tempfile::tempdir().unwrap();
+        let config_file = dir.path().join("config.toml");
+
+        let config = Config {
+            worktree_root: dir.path().join("worktrees"),
+        };
+
+        config.save_to(&config_file).unwrap();
+        assert!(config_file.exists());
+
+        let loaded_config = Config::load_from(&config_file).unwrap();
+        assert_eq!(config, loaded_config);
     }
 }
