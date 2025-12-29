@@ -20,13 +20,10 @@ pub enum ConfigCommandError {
 }
 
 pub fn handle_config_command(cmd: &ConfigCommands) {
-    match execute_config_command(cmd) {
-        Ok(()) => {}
-        Err(e) => {
-            eprintln!("{}", e);
-            exit(1);
-        }
-    }
+    execute_config_command(cmd).unwrap_or_else(|e| {
+        eprintln!("{}", e);
+        exit(1);
+    });
 }
 
 fn execute_config_command(cmd: &ConfigCommands) -> Result<(), ConfigCommandError> {
