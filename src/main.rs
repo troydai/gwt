@@ -1,4 +1,5 @@
 mod config;
+mod command;
 
 use clap::{Parser, Subcommand};
 use config::Config;
@@ -18,7 +19,7 @@ struct Cli {
 enum Commands {
     /// Configure gwt
     #[command(subcommand)]
-    Config(ConfigCommands),
+    Config(command::config::ConfigCommands),
 
     /// Switch to an existing worktree for a branch (prints path on success)
     Switch {
@@ -33,45 +34,11 @@ enum Commands {
     },
 }
 
-#[derive(Subcommand)]
-enum ConfigCommands {
-    /// View the current configuration file path and contents
-    View,
-}
-
 fn main() {
     let cli = Cli::parse();
 
     match &cli.command {
-        Commands::Config(config_cmd) => match config_cmd {
-            ConfigCommands::View => {
-                let config_path = match config::config_file_path() {
-                    Ok(path) => path,
-                    Err(e) => {
-                        eprintln!("Error getting config file path: {}", e);
-                        exit(1);
-                    }
-                };
-
-                println!("Config file path: {}", config_path.display());
-
-                if !config_path.exists() {
-                    eprintln!("Config file does not exist at {}", config_path.display());
-                    exit(1);
-                }
-
-                match std::fs::read_to_string(&config_path) {
-                    Ok(contents) => {
-                        println!("\nConfig file contents:");
-                        println!("{}", contents);
-                    }
-                    Err(e) => {
-                        eprintln!("Error reading config file: {}", e);
-                        exit(1);
-                    }
-                }
-            }
-        },
+        Commands::Config(config_cmd) => command::config::handle_config_command(config_cmd),
         Commands::Switch { branch } => {
             let config = match Config::init() {
                 Ok(config) => config,
