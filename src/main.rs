@@ -2,10 +2,7 @@ mod command;
 mod config;
 
 use clap::{Parser, Subcommand};
-use config::Config;
 use std::process::exit;
-
-use gwt::{WorktreeError, find_worktree_for_branch, generate_init, list_worktrees};
 
 #[derive(Parser)]
 #[command(name = "gwt")]
@@ -45,54 +42,22 @@ fn main() {
             }
         }
         Commands::Switch { branch } => {
-            let config = match Config::init() {
-                Ok(config) => config,
-                Err(config::ConfigError::SetupCancelled) => {
-                    eprintln!("Setup cancelled. Run gwt again to configure.");
-                    exit(1);
-                }
-                Err(e) => {
-                    eprintln!("Configuration error: {}", e);
-                    exit(1);
-                }
+            let switch_cmd = command::worktree::Switch {
+                branch: branch.clone(),
             };
-
-            if let Err(e) = config.ensure_worktree_root() {
-                eprintln!("Error ensuring worktree root exists: {}", e);
-                exit(1);
-            }
-
-            match list_worktrees() {
-                Ok(wts) => match find_worktree_for_branch(&wts, branch) {
-                    Some(w) => {
-                        println!("{}", w.path().display());
-                        exit(0);
-                    }
-                    None => {
-                        eprintln!("Worktree for branch {} doesn't exist.", branch);
-                        exit(1);
-                    }
-                },
-                Err(e) => match e {
-                    WorktreeError::GitError(s) => {
-                        eprintln!("Git error: {}", s);
-                        exit(1);
-                    }
-                    _ => {
-                        eprintln!("Error listing worktrees: {}", e);
-                        exit(1);
-                    }
-                },
-            }
-        }
-        Commands::Init { shell } => match generate_init(shell) {
-            Ok(s) => {
-                println!("{}", s);
-            }
-            Err(e) => {
+            if let Err(e) = command::worktree::handle_switch_command(&switch_cmd) {
                 eprintln!("{}", e);
                 exit(1);
             }
-        },
+        }
+        Commands::Init { shell } => {
+            let init_cmd = command::shell::Init {
+                shell: shell.clone(),
+            };
+            if let Err(e) = command::shell::handle_init_command(&init_cmd) {
+                eprintln!("{}", e);
+                exit(1);
+            }
+        }
     }
 }
