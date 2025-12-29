@@ -4,6 +4,10 @@ use std::fs;
 use std::path::PathBuf;
 use thiserror::Error;
 
+const DEFAULT_WORKTREE_ROOT: &str = ".gwt_store";
+const CONFIG_DIR_NAME: &str = ".gwt";
+const CONFIG_FILE_NAME: &str = "config.toml";
+
 #[derive(Error, Debug)]
 pub enum ConfigError {
     #[error("Config file not found at {0}")]
@@ -32,7 +36,7 @@ impl Config {
     pub fn new_default() -> Result<Self, ConfigError> {
         let home = dirs::home_dir().ok_or(ConfigError::HomeDirNotFound)?;
         Ok(Self {
-            worktree_root: home.join(".gwt_store"),
+            worktree_root: home.join(DEFAULT_WORKTREE_ROOT),
         })
     }
 }
@@ -41,12 +45,12 @@ impl Config {
 pub fn config_dir() -> Result<PathBuf, ConfigError> {
     dirs::home_dir()
         .ok_or(ConfigError::HomeDirNotFound)
-        .map(|p| p.join(".gwt"))
+        .map(|p| p.join(CONFIG_DIR_NAME))
 }
 
 /// Returns the path to the config file (~/.gwt/config.toml)
 pub fn config_file_path() -> Result<PathBuf, ConfigError> {
-    Ok(config_dir()?.join("config.toml"))
+    Ok(config_dir()?.join(CONFIG_FILE_NAME))
 }
 
 impl Config {
@@ -101,7 +105,7 @@ impl Config {
 
         let default_root = Self::new_default()
             .map(|c| c.worktree_root)
-            .unwrap_or_else(|_| PathBuf::from("~/.gwt_store"));
+            .unwrap_or_else(|_| PathBuf::from(format!("~/{}", DEFAULT_WORKTREE_ROOT)));
 
         let worktree_root: String = Input::new()
             .with_prompt("Worktree root directory")
@@ -170,7 +174,7 @@ mod tests {
                 config
                     .worktree_root
                     .to_string_lossy()
-                    .contains(".gwt_store")
+                    .contains(DEFAULT_WORKTREE_ROOT)
             );
         }
     }
