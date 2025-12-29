@@ -71,10 +71,8 @@ impl Config {
 
     /// Save config to a specific path
     pub fn save_to(&self, path: &PathBuf) -> Result<(), ConfigError> {
-        if let Some(parent) = path.parent() {
-            if !parent.exists() {
-                fs::create_dir_all(parent)?;
-            }
+        if let Some(parent) = path.parent().filter(|p| !p.exists()) {
+            fs::create_dir_all(parent)?;
         }
         let contents = toml::to_string_pretty(self).map_err(ConfigError::SerializeError)?;
         fs::write(path, contents)?;
