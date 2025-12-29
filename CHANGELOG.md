@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
 
 - Implemented `gwtree switch <branch>` command which prints the path of an existing worktree for the specified branch and exits with 0; prints an error and exits 1 if not found. 🔧
 - Implemented `gwtree init <shell>` which emits shell-integration code for `bash`, `zsh`, and `fish` to allow `gwt` wrapper to `cd` into worktrees on success. 🔧
+- Added `make install` command for convenient local installation (macOS/Linux). 📦
 
 ### Tests
 
