@@ -181,6 +181,7 @@ mod tests {
         // Test loading
         let cmd = crate::command::Commands::Sw {
             branch: "test".to_string(),
+            create: false,
         };
         let loaded = load_with_home(&cmd, &home).unwrap();
         match loaded {

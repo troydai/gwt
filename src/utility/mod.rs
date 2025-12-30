@@ -47,6 +47,11 @@ impl Git {
         Ok(stdout.lines().any(|line| line.trim() == ref_name))
     }
 
+    pub fn create_branch(&self, branch: &str) -> Result<()> {
+        self.run(&["branch", branch])?;
+        Ok(())
+    }
+
     pub fn add_worktree(&self, path: &str, branch: &str) -> Result<()> {
         self.run(&["worktree", "add", path, branch])?;
         Ok(())
@@ -293,6 +298,30 @@ fi
 
         let git = Git::new();
         assert!(!git.branch_exists("non-existent").unwrap());
+
+        unsafe {
+            std::env::remove_var("GWT_GIT");
+        }
+    }
+
+    #[test]
+    fn test_create_branch() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        let script = r#"#!/bin/sh
+if [ "$1" = "branch" ] && [ "$2" = "new-branch" ]; then
+    exit 0
+else
+    echo "unexpected args: $@" >&2
+    exit 1
+fi
+"#;
+        let (mock_git, _dir) = create_mock_git_script(script);
+        unsafe {
+            std::env::set_var("GWT_GIT", &mock_git);
+        }
+
+        let git = Git::new();
+        assert!(git.create_branch("new-branch").is_ok());
 
         unsafe {
             std::env::remove_var("GWT_GIT");
