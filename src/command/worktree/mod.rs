@@ -7,7 +7,7 @@ use std::path::PathBuf;
 
 use console::style;
 
-pub fn handle(config: &Config, branch: &str) -> Result<()> {
+pub fn handle(config: &Config, branch: &str, create: bool) -> Result<()> {
     config.ensure_worktree_root()?;
 
     let git = Git::new();
@@ -25,18 +25,32 @@ pub fn handle(config: &Config, branch: &str) -> Result<()> {
         .iter()
         .find(|wt| wt.branch().is_some_and(|v| v == branch))
         .map(|wt| wt.path().clone())
-        .map_or_else(|| create_worktree_and_print_path(&git, config, branch), Ok)?;
+        .map_or_else(
+            || create_worktree_and_print_path(&git, config, branch, create),
+            Ok,
+        )?;
 
     println!("{}", wt_path.display());
     Ok(())
 }
 
-fn create_worktree_and_print_path(git: &Git, config: &Config, branch: &str) -> Result<PathBuf> {
+fn create_worktree_and_print_path(
+    git: &Git,
+    config: &Config,
+    branch: &str,
+    create: bool,
+) -> Result<PathBuf> {
     let exists = git
         .branch_exists(branch)
         .context("Failed to check if branch exists")?;
     if !exists {
-        bail!("Branch '{}' doesn't exist.", branch);
+        if create {
+            git.create_branch(branch)
+                .context(format!("Failed to create branch '{}'", branch))?;
+            eprintln!("Branch '{}' created.", branch);
+        } else {
+            bail!("Branch '{}' doesn't exist.", branch);
+        }
     }
 
     let target_path = compute_target_path(git, config, branch)?;
@@ -146,6 +160,51 @@ exit 1
         let hash = compute_worktree_hash("/path/to/my-repo", "feature-branch");
         let expected_path = PathBuf::from("/tmp/wt-root").join(hash);
         assert_eq!(path, expected_path);
+
+        unsafe {
+            std::env::remove_var("GWT_GIT");
+        }
+    }
+
+    #[test]
+    fn test_create_worktree_and_print_path_with_create() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        let script = r#"#!/bin/sh
+case "$@" in
+    "for-each-ref --format=%(refname) refs/heads/new-branch")
+        exit 0
+        ;;
+    "branch new-branch")
+        exit 0
+        ;;
+    "rev-parse --show-toplevel")
+        echo "/path/to/repo"
+        exit 0
+        ;;
+    "worktree add "* )
+        exit 0
+        ;;
+    *)
+        echo "unexpected args: $@" >&2
+        exit 1
+        ;;
+esac
+"#;
+        let (mock_git, _dir) = create_mock_git_script(script);
+        unsafe {
+            std::env::set_var("GWT_GIT", &mock_git);
+        }
+
+        let config = Config::Loaded(
+            ConfigData {
+                worktree_root: PathBuf::from("/tmp/wt-root"),
+            },
+            PathBuf::from("/tmp/config"),
+        );
+
+        let git = Git::new();
+        let result = create_worktree_and_print_path(&git, &config, "new-branch", true);
+        assert!(result.is_ok());
 
         unsafe {
             std::env::remove_var("GWT_GIT");

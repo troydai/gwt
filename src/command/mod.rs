@@ -22,6 +22,10 @@ pub enum Commands {
     Sw {
         /// Branch name to switch to
         branch: String,
+
+        /// Create a new branch
+        #[arg(short = 'b', long = "create-branch")]
+        create: bool,
     },
 
     /// Output shell integration code for a given shell (bash, zsh, fish)

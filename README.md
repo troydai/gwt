@@ -73,7 +73,7 @@ This will build a container with GWT pre-installed and drop you into a shell whe
 
 ### Commands
 
-#### `gwt sw <branch>` (Switch)
+#### `gwt sw <branch> [-b|--create-branch]` (Switch)
 
 The `sw` (switch) command is the heart of GWT. It combines worktree discovery, creation, and directory navigation into a single seamless operation.
 
@@ -82,12 +82,15 @@ The `sw` (switch) command is the heart of GWT. It combines worktree discovery, c
     - It creates a new worktree in your centralized `worktree_root` (default `~/.gwt_store`).
     - It uses a deterministic hashing algorithm to ensure the worktree path is stable and unique to that repository/branch combination.
     - Once created, it immediately moves your shell into that new directory.
-- **Safe Transitions**: GWT checks if you are already on the target branch or if the branch exists before making any changes, preventing accidental state issues.
+- **New Branch Creation**: With the `-b` or `--create-branch` flag, GWT will create the branch for you if it doesn't already exist.
+- **Safe Transitions**: GWT checks if you are already on the target branch or if the branch exists before making any changes, preventing accidental state issues. Informational messages are printed to `stderr` to keep `stdout` clean for path-based navigation.
 
 **Example:**
 ```bash
-# Switch to a feature branch
-$ gwt sw feature-api-v2
+# Switch to a feature branch, creating it if necessary
+$ gwt sw -b feature-api-v2
+Branch 'feature-api-v2' created.
+Created directory: /Users/me/.gwt_store
 Created worktree for branch 'feature-api-v2' at '/Users/me/.gwt_store/a1b2c3d4e5f6g7h8'
 
 # You are now automatically navigated to the worktree directory
