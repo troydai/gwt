@@ -32,7 +32,15 @@ impl Git {
     }
 
     pub fn list_worktrees(&self) -> Result<Vec<Worktree>> {
-        self.list_worktrees_with_cmd()
+        let output = self.run(&["worktree", "list", "--porcelain"])?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+            bail!("failed git execution: {stderr}");
+        }
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        Ok(parse_porcelain(&stdout))
     }
 
     pub fn branch_exists(&self, branch: &str) -> Result<bool> {
@@ -62,18 +70,6 @@ impl Git {
         }
         let stdout = String::from_utf8_lossy(&output.stdout);
         Ok(PathBuf::from(stdout.trim()))
-    }
-
-    pub fn list_worktrees_with_cmd(&self) -> Result<Vec<Worktree>> {
-        let output = self.run(&["worktree", "list", "--porcelain"])?;
-
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-            bail!("failed git execution: {stderr}");
-        }
-
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        Ok(parse_porcelain(&stdout))
     }
 }
 
@@ -253,7 +249,7 @@ branch refs/heads/main"
         }
 
         let git = Git::new();
-        let wts = git.list_worktrees_with_cmd().unwrap();
+        let wts = git.list_worktrees().unwrap();
 
         unsafe {
             std::env::remove_var("GWT_GIT");
