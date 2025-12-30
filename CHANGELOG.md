@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- Added `gwt config setup` command to allow users to interactively set up or reset the configuration.
+
+### Internal
+
+- Refactored configuration loading logic to separate interactive prompting from the main loading flow.
+- Simplified `setup` function return type and improved modularity in `src/config/mod.rs`.
+
 ## [0.1.0] - 2025-12-30
 
 ### Added
