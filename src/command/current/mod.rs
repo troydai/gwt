@@ -1,5 +1,6 @@
 use crate::utility::Git;
 use anyhow::Result;
+use console::style;
 
 pub fn handle() -> Result<()> {
     let git = Git::new();
@@ -7,13 +8,17 @@ pub fn handle() -> Result<()> {
     let branch = git.get_current_branch()?;
     let toplevel = git.git_toplevel()?;
 
-    let branch_name = if branch.is_empty() {
-        "(detached)".to_string()
+    let branch_display = if branch.is_empty() {
+        style("(detached)".to_string()).yellow()
     } else {
-        branch
+        style(branch).green()
     };
 
-    println!("Branch {} @ Worktree {}", branch_name, toplevel.display());
+    println!(
+        "Branch {} @ Worktree {}",
+        branch_display,
+        style(toplevel.display()).cyan()
+    );
 
     Ok(())
 }

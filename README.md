@@ -105,8 +105,8 @@ $ pwd
 Displays information about the current Git worktree and branch. This is useful for quickly checking which branch you're on and which worktree directory you're working in.
 
 The command outputs:
-- The current branch name (or `(detached)` if HEAD is detached)
-- The absolute path to the current worktree root directory
+- The current branch name (or `(detached)` if HEAD is detached) - highlighted in green (yellow for detached)
+- The absolute path to the current worktree root directory - highlighted in cyan
 
 **Example:**
 ```bash
