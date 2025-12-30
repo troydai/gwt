@@ -179,7 +179,7 @@ mod tests {
         assert!(content.contains("worktree_root = \"/tmp/gwt_test\""));
 
         // Test loading
-        let cmd = crate::command::Commands::Switch {
+        let cmd = crate::command::Commands::Sw {
             branch: "test".to_string(),
         };
         let loaded = load_with_home(&cmd, &home).unwrap();

@@ -65,12 +65,12 @@ Reload your shell (or open a new terminal) and you're ready to go.
 
 ### Commands
 
-- `gwtree switch <branch>` — If a worktree already exists for `<branch>`, prints the worktree path to stdout and exits 0. If no worktree exists for that branch, creates a new worktree and prints its path to stdout (exit 0). If the branch does not exist, prints an error message to stderr and exits 1.
+- `gwtree sw <branch>` — If a worktree already exists for `<branch>`, prints the worktree path to stdout and exits 0. If no worktree exists for that branch, creates a new worktree and prints its path to stdout (exit 0). If the branch does not exist, prints an error message to stderr and exits 1.
 
 Example (existing worktree):
 
 ```bash
-$ gwt switch feature-branch
+$ gwt sw feature-branch
 /path/to/worktrees/feature-branch
 $ echo $?
 0
@@ -79,7 +79,7 @@ $ echo $?
 Example (missing worktree: created):
 
 ```bash
-$ gwt switch feature-branch
+$ gwt sw feature-branch
 $HOME/.gwt_store/<repo>/<hash>
 $ echo $?
 0
@@ -118,9 +118,9 @@ Bash / Zsh example (what `gwtree init bash` prints):
 
 ```bash
 gwt() {
-  if [ "$1" = "switch" ]; then
+  if [ "$1" = "switch" ] || [ "$1" = "sw" ]; then
     local result
-    result=$(command gwtree switch "${@:2}")
+    result=$(command gwtree sw "${@:2}")
     local exit_code=$?
     if [ $exit_code -eq 0 ]; then
       cd "$result" || return 1
@@ -138,8 +138,8 @@ Fish example (what `gwtree init fish` prints):
 
 ```fish
 function gwt
-  if test "$argv[1]" = "switch"
-    set result (command gwtree switch (echo $argv | sed 's/^switch //'))
+  if test "$argv[1]" = "switch" -o "$argv[1]" = "sw"
+    set result (command gwtree sw $argv[2..-1])
     set exit_code $status
     if test $exit_code -eq 0
       cd "$result"; or return 1

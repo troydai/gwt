@@ -6,10 +6,10 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-- `gwtree switch <branch>` now notifies the user via stderr when a new worktree is created. 📢
-- `gwtree switch <branch>` now checks if the current branch matches the requested branch. If so, it prints a warning in yellow and exits with status 1 (to prevent shell cd). ⚠️
-- Implemented `gwtree switch <branch>` command which prints the path of an existing worktree for the specified branch and exits with 0; prints an error and exits 1 if not found. 🔧
-- Updated `gwtree switch <branch>` to create a worktree when missing (under `<worktree_root>/<repo>/<hash>`), and only error when the branch does not exist. 🔧
+- `gwtree sw <branch>` now notifies the user via stderr when a new worktree is created. 📢
+- `gwtree sw <branch>` now checks if the current branch matches the requested branch. If so, it prints a warning in yellow and exits with status 1 (to prevent shell cd). ⚠️
+- Implemented `gwtree sw <branch>` command which prints the path of an existing worktree for the specified branch and exits with 0; prints an error and exits 1 if not found. 🔧
+- Updated `gwtree sw <branch>` to create a worktree when missing (under `<worktree_root>/<repo>/<hash>`), and only error when the branch does not exist. 🔧
 - Implemented `gwtree init <shell>` which emits shell-integration code for `bash`, `zsh`, and `fish` to allow `gwt` wrapper to `cd` into worktrees on success. 🔧
 - Added `make install` command for convenient local installation (macOS/Linux). 📦
 - Implemented `gwtree config view` command which displays the configuration file path and contents with colored output. This allows users to inspect their configuration without triggering an interactive setup process. 🎨
@@ -19,7 +19,7 @@ All notable changes to this project will be documented in this file.
 - Added unit tests for parsing `git worktree list --porcelain` output and branch matching. ✅
 - Added integration tests:
   - Mock-based tests that substitute `git` via `GWT_GIT` env var to assert CLI behavior. ✅
-  - Real `git` repository tests that create branches and worktrees and assert `gwtree switch` behavior. ✅
+  - Real `git` repository tests that create branches and worktrees and assert `gwtree sw` behavior. ✅
 
 ### Internal
 
