@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- Improved playground environment by automatically creating a sample git repository (`test_repo`) on startup. 🏗️
 - `gwtree sw <branch>` now notifies the user via stderr when a new worktree is created. 📢
 - `gwtree sw <branch>` now checks if the current branch matches the requested branch. If so, it prints a warning in yellow and exits with status 1 (to prevent shell cd). ⚠️
 - Implemented `gwtree sw <branch>` command which prints the path of an existing worktree for the specified branch and exits with 0; prints an error and exits 1 if not found. 🔧
