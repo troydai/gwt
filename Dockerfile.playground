@@ -37,4 +37,11 @@ RUN git config --global user.email "developer@playground.local" \
 # Set up shell integration
 RUN echo 'eval "$(gwtree init bash)"' >> ~/.bashrc
 
+# Create sample git repository
+RUN mkdir test_repo && cd test_repo \
+    && git init -b master \
+    && echo "# Test Repository" > README.md \
+    && git add README.md \
+    && git commit -m "initial commit"
+
 CMD ["/bin/bash"]
