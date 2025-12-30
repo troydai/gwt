@@ -13,11 +13,7 @@ pub fn handle() -> Result<()> {
         branch
     };
 
-    println!(
-        "Branch {} @ Worktree {}",
-        branch_name,
-        toplevel.display()
-    );
+    println!("Branch {} @ Worktree {}", branch_name, toplevel.display());
 
     Ok(())
 }
