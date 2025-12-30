@@ -1,4 +1,6 @@
+use anyhow::{Result, anyhow};
 use clap::Subcommand;
+use config::Config;
 use console::Style;
 
 use crate::config;
@@ -9,42 +11,29 @@ pub enum ConfigCommands {
     View,
 }
 
-#[derive(Debug, thiserror::Error)]
-pub enum ConfigCommandError {
-    #[error("Error getting config file path: {0}")]
-    ConfigPathError(#[from] config::ConfigError),
-    #[error("Config file does not exist at {0}")]
-    #[allow(dead_code)] // Used in tests
-    ConfigNotFound(std::path::PathBuf),
-    #[error("Error reading config file: {0}")]
-    ReadError(#[from] std::io::Error),
-    #[error("Setup cancelled by user")]
-    SetupCancelled,
+pub fn handle(config: &Config, cmd: &ConfigCommands) -> Result<()> {
+    match cmd {
+        ConfigCommands::View => view_config(config),
+    }
 }
 
-pub fn handle_config_command(cmd: &ConfigCommands) -> Result<(), ConfigCommandError> {
-    let ConfigCommands::View = cmd;
-
-    let config_path = config::config_file_path()?;
+fn view_config(config: &Config) -> Result<()> {
+    let p = config
+        .config_path()
+        .ok_or_else(|| anyhow!("unexpected error: invalid config"))?;
 
     let label_style = Style::new().cyan().bright();
     let path_style = Style::new().yellow();
+    let contents_style = Style::new().white().bright();
+
     println!(
         "{} {}",
         label_style.apply_to("Config file path:"),
-        path_style.apply_to(config_path.display())
+        path_style.apply_to(p)
     );
 
-    if !config_path.exists() {
-        // Prompt user to create the config file
-        config::Config::interactive_setup().map_err(|e| match e {
-            config::ConfigError::SetupCancelled => ConfigCommandError::SetupCancelled,
-            e => ConfigCommandError::ConfigPathError(e),
-        })?;
-    }
-
-    let contents = std::fs::read_to_string(&config_path)?;
-    let contents_style = Style::new().white().bright();
+    // Config is already initialized in main.rs, so we can just read it
+    let contents = std::fs::read_to_string(p)?;
     println!("\n{}", label_style.apply_to("Config file contents:"));
     println!("{}", contents_style.apply_to(contents));
 
@@ -94,31 +83,12 @@ mod tests {
     }
 
     #[test]
-    fn test_config_command_error_types() {
-        // Test ConfigCommandError variants can be created and formatted
-        let dir = tempdir().unwrap();
-        let path = dir.path().join("test.toml");
-
-        let not_found_err = ConfigCommandError::ConfigNotFound(path.clone());
-        let error_msg = format!("{}", not_found_err);
-        assert!(error_msg.contains("Config file does not exist"));
-        assert!(error_msg.contains(path.to_string_lossy().as_ref()));
-
-        // Test ReadError
-        let io_err = std::io::Error::new(std::io::ErrorKind::PermissionDenied, "test");
-        let read_err = ConfigCommandError::ReadError(io_err);
-        let error_msg = format!("{}", read_err);
-        assert!(error_msg.contains("Error reading config file"));
-    }
-
-    #[test]
     fn test_config_commands_view_variant() {
         // Test that ConfigCommands::View can be created and matched
         let cmd = ConfigCommands::View;
         match cmd {
             ConfigCommands::View => {
                 // This ensures the variant exists and can be matched
-                assert!(true);
             }
         }
     }
@@ -161,16 +131,5 @@ mod tests {
         // Test reading the config
         let contents = fs::read_to_string(&config_file).unwrap();
         assert!(contents.contains("worktree_root"));
-    }
-
-    #[test]
-    fn test_config_command_error_display() {
-        // Test error message formatting
-        let path = std::path::PathBuf::from("/nonexistent/path/config.toml");
-        let err = ConfigCommandError::ConfigNotFound(path.clone());
-
-        let error_string = format!("{}", err);
-        assert!(error_string.contains("Config file does not exist"));
-        assert!(error_string.contains(path.to_string_lossy().as_ref()));
     }
 }
