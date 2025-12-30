@@ -125,14 +125,12 @@ pub fn remove(
     let current_dir = env::current_dir().context("Failed to get current directory")?;
     let need_to_switch = current_dir.starts_with(worktree_path);
 
-    if need_to_switch {
-        // Get the main worktree to switch to
-        let main_worktree = git.get_main_worktree()?;
-        let main_path = main_worktree.path();
-
-        // Print the main worktree path so the shell wrapper can cd to it
-        println!("{}", main_path.display());
-    }
+    // Get the main worktree path if we need to switch (but don't print yet)
+    let main_path = if need_to_switch {
+        Some(git.get_main_worktree()?.path().clone())
+    } else {
+        None
+    };
 
     // Request confirmation
     let prompt = format!(
@@ -150,6 +148,11 @@ pub fn remove(
     if !confirmed {
         eprintln!("Removal cancelled.");
         return Ok(());
+    }
+
+    // Print the main worktree path so the shell wrapper can cd to it (only after confirmation)
+    if let Some(path) = main_path {
+        println!("{}", path.display());
     }
 
     // Remove the worktree
