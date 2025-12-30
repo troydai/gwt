@@ -32,7 +32,7 @@ fn create_worktree_and_print_path(config: &Config, branch: &str) -> Result<()> {
         bail!("Branch '{}' doesn't exist.", branch);
     }
 
-    let (target_path, _repo_name) = compute_target_path(config, branch)?;
+    let target_path = compute_target_path(config, branch)?;
 
     if let Some(parent) = target_path.parent() {
         fs::create_dir_all(parent)
@@ -45,7 +45,7 @@ fn create_worktree_and_print_path(config: &Config, branch: &str) -> Result<()> {
     Ok(())
 }
 
-fn compute_target_path(config: &Config, branch: &str) -> Result<(PathBuf, String)> {
+fn compute_target_path(config: &Config, branch: &str) -> Result<PathBuf> {
     let toplevel = git_toplevel().context("Failed to get git toplevel")?;
     let repo_name = toplevel
         .file_name()
@@ -64,7 +64,7 @@ fn compute_target_path(config: &Config, branch: &str) -> Result<(PathBuf, String
         .map(|d| &d.worktree_root)
         .ok_or_else(|| anyhow!("Config not loaded"))?;
     let target_path = worktree_root.join(&repo_name).join(hash);
-    Ok((target_path, repo_name))
+    Ok(target_path)
 }
 
 /// Representation of a Git worktree
@@ -412,8 +412,7 @@ exit 1
             PathBuf::from("/tmp/config"),
         );
 
-        let (path, repo_name) = compute_target_path(&config, "feature-branch").unwrap();
-        assert_eq!(repo_name, "my-repo");
+        let path = compute_target_path(&config, "feature-branch").unwrap();
 
         let hash = compute_worktree_hash("my-repo", "feature-branch");
         let expected_path = PathBuf::from("/tmp/wt-root/my-repo").join(hash);
