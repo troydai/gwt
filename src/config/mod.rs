@@ -28,8 +28,26 @@ pub fn load(cmd: &command::Commands) -> Result<Config> {
     load_with_home(cmd, &home)
 }
 
+pub fn setup() -> Result<Config> {
+    let home = home_dir()?;
+    let d = prompt_for_config_data(&home)?;
+
+    let config_path = config_file_path(&home);
+    d.save(&config_path)?;
+    eprintln!("Configuration saved to {}", config_path.display());
+
+    let config = Config::Loaded(d, config_path);
+    config.ensure_worktree_root()?;
+
+    Ok(config)
+}
+
 fn load_with_home(cmd: &command::Commands, home: &Path) -> Result<Config> {
     if let command::Commands::Init { .. } = cmd {
+        return Ok(Config::Omit);
+    }
+
+    if let command::Commands::Config(command::config::ConfigCommands::Setup) = cmd {
         return Ok(Config::Omit);
     }
 
@@ -52,15 +70,7 @@ fn load_with_home(cmd: &command::Commands, home: &Path) -> Result<Config> {
         bail!("configuration file must be created first.");
     }
 
-    let worktree_root: String = Input::with_theme(&prompt_theme())
-        .with_prompt("Worktree root directory")
-        .default(default_store_path(home).to_string_lossy().to_string())
-        .interact_text()
-        .map_err(|e| anyhow!("initialization cancelled: {e}"))?;
-
-    let d = ConfigData {
-        worktree_root: PathBuf::from(worktree_root),
-    };
+    let d = prompt_for_config_data(home)?;
 
     d.save(&config_path)?;
     eprintln!("Configuration saved to {}", config_path.display());
@@ -69,6 +79,18 @@ fn load_with_home(cmd: &command::Commands, home: &Path) -> Result<Config> {
     config.ensure_worktree_root()?;
 
     Ok(config)
+}
+
+fn prompt_for_config_data(home: &Path) -> Result<ConfigData> {
+    let worktree_root: String = Input::with_theme(&prompt_theme())
+        .with_prompt("Worktree root directory")
+        .default(default_store_path(home).to_string_lossy().to_string())
+        .interact_text()
+        .map_err(|e| anyhow!("initialization cancelled: {e}"))?;
+
+    Ok(ConfigData {
+        worktree_root: PathBuf::from(worktree_root),
+    })
 }
 
 impl Config {

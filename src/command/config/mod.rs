@@ -9,11 +9,17 @@ use crate::config;
 pub enum ConfigCommands {
     /// View the current configuration file path and contents
     View,
+    /// Reset the configuration
+    Setup,
 }
 
 pub fn handle(config: &Config, cmd: &ConfigCommands) -> Result<()> {
     match cmd {
         ConfigCommands::View => view_config(config),
+        ConfigCommands::Setup => {
+            config::setup()?;
+            Ok(())
+        }
     }
 }
 
@@ -51,8 +57,7 @@ mod tests {
         let dir = tempdir().unwrap();
         let config_file = dir.path().join("config.toml");
 
-        let config_content = r#"worktree_root = "/tmp/test_worktrees"
-"#;
+        let config_content = r###"worktree_root = "/tmp/test_worktrees""###;
         fs::write(&config_file, config_content).unwrap();
 
         // Test the file reading logic directly
@@ -90,6 +95,7 @@ mod tests {
             ConfigCommands::View => {
                 // This ensures the variant exists and can be matched
             }
+            _ => {}
         }
     }
 
@@ -120,8 +126,7 @@ mod tests {
         fs::create_dir_all(&config_dir).unwrap();
         let config_file = config_dir.join("config.toml");
 
-        let config_content = r#"worktree_root = "/tmp/test_worktrees"
-"#;
+        let config_content = r###"worktree_root = "/tmp/test_worktrees""###;
         fs::write(&config_file, config_content).unwrap();
 
         // Verify the file structure matches what we expect
@@ -131,5 +136,14 @@ mod tests {
         // Test reading the config
         let contents = fs::read_to_string(&config_file).unwrap();
         assert!(contents.contains("worktree_root"));
+    }
+
+    #[test]
+    fn test_config_commands_setup_variant() {
+        let cmd = ConfigCommands::Setup;
+        match cmd {
+            ConfigCommands::Setup => {}
+            _ => panic!("Expected Setup variant"),
+        }
     }
 }
