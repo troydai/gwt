@@ -9,6 +9,12 @@ pub fn handle(config: &Config, branch: &str) -> Result<()> {
     config.ensure_worktree_root()?;
 
     let git = Git::new();
+
+    if git.get_current_branch().is_ok_and(|c| c == branch) {
+        eprintln!("You are already on branch '{}'.", branch);
+        return Ok(());
+    }
+
     let wt_path = git
         .list_worktrees()?
         .iter()

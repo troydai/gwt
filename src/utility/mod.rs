@@ -22,6 +22,15 @@ impl Git {
             .map_err(|e| anyhow!("git error: {e}"))
     }
 
+    pub fn get_current_branch(&self) -> Result<String> {
+        let output = self.run(&["branch", "--show-current"])?;
+        if !output.status.success() {
+            bail!("Git error: {}", String::from_utf8_lossy(&output.stderr));
+        }
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        Ok(stdout.trim().to_string())
+    }
+
     pub fn list_worktrees(&self) -> Result<Vec<Worktree>> {
         self.list_worktrees_with_cmd()
     }
