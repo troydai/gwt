@@ -1,6 +1,8 @@
 use std::path::{Path, PathBuf};
-use std::process::{Command, Output};
+use std::process::Command;
 use thiserror::Error;
+
+use crate::utility::{git_cmd, run_git};
 
 /// Representation of a Git worktree
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -38,29 +40,6 @@ pub enum WorktreeError {
     ParseError(String),
 }
 
-fn git_cmd() -> String {
-    std::env::var("GWT_GIT").unwrap_or_else(|_| "git".to_string())
-}
-
-fn run_git(args: &[&str]) -> Result<Output, WorktreeError> {
-    Command::new(git_cmd())
-        .args(args)
-        .output()
-        .map_err(WorktreeError::Io)
-}
-
-/// Return the repository top-level directory (`git rev-parse --show-toplevel`).
-pub fn git_toplevel() -> Result<PathBuf, WorktreeError> {
-    let output = run_git(&["rev-parse", "--show-toplevel"])?;
-    if !output.status.success() {
-        return Err(WorktreeError::GitError(
-            String::from_utf8_lossy(&output.stderr).to_string(),
-        ));
-    }
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    Ok(PathBuf::from(stdout.trim()))
-}
-
 /// Check if a local branch exists (`refs/heads/<branch>`).
 pub fn branch_exists(branch: &str) -> Result<bool, WorktreeError> {
     let ref_name = format!("refs/heads/{branch}");
@@ -68,12 +47,12 @@ pub fn branch_exists(branch: &str) -> Result<bool, WorktreeError> {
     if output.status.success() {
         return Ok(true);
     }
-    match output.status.code() {
-        Some(1) => Ok(false),
-        _ => Err(WorktreeError::GitError(
-            String::from_utf8_lossy(&output.stderr).to_string(),
-        )),
+    if output.status.code().is_some_and(|c| c == 1) {
+        return Ok(false);
     }
+    Err(WorktreeError::GitError(
+        String::from_utf8_lossy(&output.stderr).to_string(),
+    ))
 }
 
 /// Create a worktree for the given branch at the provided path.
