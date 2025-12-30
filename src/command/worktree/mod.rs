@@ -2,9 +2,9 @@ use crate::config::Config;
 use crate::utility::Git;
 use anyhow::{Context, Result, anyhow, bail};
 use sha1::{Digest, Sha1};
+use std::env;
 use std::fs;
 use std::path::PathBuf;
-use std::env;
 
 use console::style;
 use dialoguer::Confirm;
