@@ -78,6 +78,12 @@ Typical sizing guidelines:
 - Refactoring and new feature work should be separate items
 - Tests should be their own action items when substantial
 
+### 4. Save the plan
+
+The plan must be updated to the source github issue or markdown. If it is a github issue, append
+the plan to the issue description seprated from the original text using a horizontal line. If it is
+a markdown, append a new section with the plan.
+
 ## Output Format
 
 When updating a GitHub issue or markdown file, structure your additions clearly:
