@@ -6,10 +6,12 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- Added `gwt ls` command to list all worktrees in the format `{path} {head} [{branch}]`, providing a concise alternative to `git worktree list`.
 - Added `gwt config setup` command to allow users to interactively set up or reset the configuration.
 
 ### Internal
 
+- Refactored worktree module by renaming `handle` function to `switch` for better clarity.
 - Refactored configuration loading logic to separate interactive prompting from the main loading flow.
 - Simplified `setup` function return type and improved modularity in `src/config/mod.rs`.
 
