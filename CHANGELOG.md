@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- Added `gwt current` (alias: `gwt c`) command to display the current branch and worktree directory information. Shows "(detached)" when HEAD is detached.
 - Added `gwt config setup` command to allow users to interactively set up or reset the configuration.
 
 ### Internal

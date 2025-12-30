@@ -14,5 +14,6 @@ fn main() -> Result<()> {
         Commands::Config(config_command) => command::config::handle(&config, &config_command),
         Commands::Sw { branch, create } => command::worktree::handle(&config, &branch, create),
         Commands::Init { shell } => command::shell::handle(&shell),
+        Commands::Current => command::current::handle(),
     }
 }
