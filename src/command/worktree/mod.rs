@@ -5,14 +5,19 @@ use sha1::{Digest, Sha1};
 use std::fs;
 use std::path::PathBuf;
 
+use console::style;
+
 pub fn handle(config: &Config, branch: &str) -> Result<()> {
     config.ensure_worktree_root()?;
 
     let git = Git::new();
 
     if git.get_current_branch().is_ok_and(|c| c == branch) {
-        eprintln!("You are already on branch '{}'.", branch);
-        return Ok(());
+        eprintln!(
+            "{}",
+            style(format!("You are already on branch '{}'.", branch)).yellow()
+        );
+        std::process::exit(1);
     }
 
     let wt_path = git

@@ -222,9 +222,14 @@ branch refs/heads/b";
     #[test]
     fn test_list_worktrees_with_mock_git() {
         let script = r#"#!/bin/sh
-echo "worktree /path/to/main
+if [ "$1" = "worktree" ] && [ "$2" = "list" ] && [ "$3" = "--porcelain" ]; then
+    echo "worktree /path/to/main
 HEAD abc123
 branch refs/heads/main"
+else
+    echo "unexpected args: $@" >&2
+    exit 1
+fi
 "#;
         let (mock_git, _dir) = create_mock_git_script(script);
         // We need to inject the mock git path.
@@ -274,10 +279,12 @@ fi
     fn test_branch_exists_false() {
         let _guard = ENV_LOCK.lock().unwrap();
         let script = r#"#!/bin/sh
-if [ "$1" = "for-each-ref" ] && [ "$2" = "--format=%(refname)" ]; then
+if [ "$1" = "for-each-ref" ] && [ "$2" = "--format=%(refname)" ] && [ "$3" = "refs/heads/non-existent" ]; then
     exit 0
+else
+    echo "unexpected args: $@" >&2
+    exit 1
 fi
-exit 1
 "#;
         let (mock_git, _dir) = create_mock_git_script(script);
         unsafe {
