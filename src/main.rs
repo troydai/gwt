@@ -19,5 +19,6 @@ fn main() -> Result<()> {
             main,
         } => command::worktree::switch(&config, branch.as_deref(), create, main),
         Commands::Init { shell } => command::shell::handle(&shell),
+        Commands::Current => command::current::handle(),
     }
 }
