@@ -1,246 +1,141 @@
 # GWT: Git Worktree Management
 
-## Overview
+[![CI](https://github.com/troydai/gwt/actions/workflows/ci.yml/badge.svg)](https://github.com/troydai/gwt/actions/workflows/ci.yml)
 
-GWT is a CLI tool designed to simplify Git worktree management and reduce operational overhead. As AI-driven development becomes more common, the need for multiple concurrent work environments within a single repository has increased. Git worktrees provide a lightweight alternative to full repository clones, but the native command set can be cumbersome, requiring manual directory navigation and lacking centralized organization.
+GWT is a CLI tool designed to streamline Git worktree management. It provides a centralized, organized way to handle multiple concurrent work environments within a single repository, reducing the operational overhead of the native `git worktree` command set.
 
-GWT streamlines this workflow by providing a unified interface for creating, navigating, and managing worktrees, optimizing the experience for both developers and AI agents.
+## Why GWT?
 
-## Status
+As AI-driven development and complex feature branching become more common, developers often need to work across multiple branches simultaneously. While Git worktrees are a powerful alternative to full repository clones, they can be cumbersome to manage:
 
-This project is currently under active development.
+- **Clutter**: Creating worktrees inside your main repository can clutter your file system.
+- **Navigation**: Manually navigating between worktree directories is slow.
+- **Lifecycle**: Cleaning up or tracking worktrees spread across different paths is difficult.
+
+GWT solves this by:
+- **Centralizing Storage**: All worktrees are stored in a dedicated root directory (e.g., `~/.gwt_store`), keeping your repositories clean.
+- **Automatic Navigation**: A shell wrapper allows you to switch branches and directories in a single command.
+- **Deterministic Paths**: Worktree locations are computed using a stable hash of the repository path and branch name.
 
 ## Installation
 
-The tool consists of two components:
-- `gwtree` - the compiled binary
-- `gwt` - a shell function that wraps `gwtree`
+### 1. Build and Install the Binary
 
-The shell function is required because changing the current working directory must be done by the shell itself (a subprocess cannot change the parent shell's directory).
-
-### Build and Install
+The core logic resides in the `gwtree` binary. You can build and install it using Cargo:
 
 ```bash
 make install
 ```
 
-This builds the release binary and installs `gwtree` to your Cargo bin directory (typically `~/.cargo/bin`).
+This installs `gwtree` to your Cargo bin directory (typically `~/.cargo/bin`).
 
-### Shell Integration
+### 2. Shell Integration
 
-Add the following to your shell configuration (e.g., `~/.bashrc` or `~/.zshrc`):
+Because a subprocess cannot change the parent shell's working directory, GWT uses a shell function named `gwt` as a wrapper.
 
+Add the following to your shell configuration file (e.g., `~/.bashrc`, `~/.zshrc`, or `~/.config/fish/config.fish`):
+
+**Bash / Zsh:**
 ```bash
-# gwt - Git Worktree Management
-gwt() {
-    gwtree "$@"
-}
-```
-
-## User Manual
-
-### Quickstart ✅
-
-Install the binary and enable shell integration:
-
-1. Install the binary:
-
-```bash
-make install
-```
-
-2. Add shell integration by evaluating the init output in your shell startup file (e.g., `~/.bashrc`, `~/.zshrc`):
-
-```bash
-# For bash or zsh
 eval "$(gwtree init bash)"
+```
 
-# For fish
+**Fish:**
+```fish
 eval (gwtree init fish)
 ```
 
-Reload your shell (or open a new terminal) and you're ready to go.
+## Quick Start
 
----
+1. **Initialize**: Run `gwt` for the first time to set up your configuration.
+   ```bash
+   gwt config view
+   ```
+   If it's your first time, it will prompt you to create a config file at `~/.gwt/config.toml`.
+
+2. **Switch to a Branch**:
+   ```bash
+   gwt sw feature-x
+   ```
+   If a worktree for `feature-x` already exists, GWT will jump to it. If not, it will create one in your worktree store and then move you there.
+
+## Try it in the Playground
+
+If you want to try GWT without affecting your local system or installing dependencies, you can use the provided Docker-based playground:
+
+```bash
+make playground
+```
+
+This will build a container with GWT pre-installed and drop you into a shell where you can experiment with worktree management safely.
+
+## User Manual
 
 ### Commands
 
-- `gwtree sw <branch>` — If a worktree already exists for `<branch>`, prints the worktree path to stdout and exits 0. If no worktree exists for that branch, creates a new worktree and prints its path to stdout (exit 0). If the branch does not exist, prints an error message to stderr and exits 1.
+#### `gwt sw <branch>` (Switch)
 
-Example (existing worktree):
+The `sw` (switch) command is the heart of GWT. It combines worktree discovery, creation, and directory navigation into a single seamless operation.
 
+- **Automatic Directory Switching**: Unlike the native `git worktree` command, `gwt sw` automatically changes your shell's current working directory to the target worktree. This eliminates the need to manually `cd` after switching branches.
+- **Just-in-Time Worktree Creation**: If a worktree for the specified branch doesn't exist yet, GWT handles the heavy lifting:
+    - It creates a new worktree in your centralized `worktree_root` (default `~/.gwt_store`).
+    - It uses a deterministic hashing algorithm to ensure the worktree path is stable and unique to that repository/branch combination.
+    - Once created, it immediately moves your shell into that new directory.
+- **Safe Transitions**: GWT checks if you are already on the target branch or if the branch exists before making any changes, preventing accidental state issues.
+
+**Example:**
 ```bash
-$ gwt sw feature-branch
-/path/to/worktrees/feature-branch
-$ echo $?
-0
-```
+# Switch to a feature branch
+$ gwt sw feature-api-v2
+Created worktree for branch 'feature-api-v2' at '/Users/me/.gwt_store/a1b2c3d4e5f6g7h8'
 
-Example (missing worktree: created):
-
-```bash
-$ gwt sw feature-branch
-$HOME/.gwt_store/<repo>/<hash>
-$ echo $?
-0
-```
-
-- `gwtree init <shell>` — Print the shell code that provides the `gwt` wrapper function for the specified shell (`bash`, `zsh`, or `fish`). The wrapper calls the `gwtree` binary and performs `cd` on success for `switch` commands.
-
-Example:
-
-```bash
-$ gwtree init bash
-# prints shell function which you can `eval` in your shell
-```
-
-- `gwtree config view` — Display the configuration file path and contents. This command shows where your config file is located and its current contents without triggering an interactive setup process.
-
-Example:
-
-```bash
-$ gwt config view
-Config file path: /home/user/.gwt/config.toml
-
-Config file contents:
-worktree_root = "/home/user/.gwt_store"
+# You are now automatically navigated to the worktree directory
+$ pwd
+/Users/me/.gwt_store/a1b2c3d4e5f6g7h8
 ```
 
 ---
 
-### Shell Integration Details
+#### `gwt config view`
+Displays the location and current contents of your configuration file. This is useful for verifying where your worktrees are being stored.
 
-Why a shell wrapper?
+#### `gwtree init <shell>`
+Generates the shell integration code required for the `gwt` wrapper to function. This is typically used once during initial setup in your `.bashrc`, `.zshrc`, or `config.fish`. Supported shells: `bash`, `zsh`, `fish`.
 
-A process cannot change the working directory of its parent shell. To get the 'cd' behavior shown in usage, the `gwt` wrapper must run in the current shell. `gwtree init <shell>` prints a shell function that the user should `eval` in their shell startup files.
+## Configuration
 
-Bash / Zsh example (what `gwtree init bash` prints):
+GWT uses a TOML configuration file located at `~/.gwt/config.toml`.
 
-```bash
-gwt() {
-  if [ "$1" = "switch" ] || [ "$1" = "sw" ]; then
-    local result
-    result=$(command gwtree sw "${@:2}")
-    local exit_code=$?
-    if [ $exit_code -eq 0 ]; then
-      cd "$result" || return 1
-    else
-      echo "$result" >&2
-      return $exit_code
-    fi
-  else
-    command gwtree "$@"
-  fi
-}
-```
+| Option | Description | Default |
+|--------|-------------|---------|
+| `worktree_root` | Absolute path where worktrees are stored. | `~/.gwt_store` |
 
-Fish example (what `gwtree init fish` prints):
-
-```fish
-function gwt
-  if test "$argv[1]" = "switch" -o "$argv[1]" = "sw"
-    set result (command gwtree sw $argv[2..-1])
-    set exit_code $status
-    if test $exit_code -eq 0
-      cd "$result"; or return 1
-    else
-      echo $result >&2
-      return $exit_code
-    end
-  else
-    command gwtree $argv
-  end
-end
-```
-
----
-
-### Configuration
-
-`gwt` uses a central configuration file to manage settings.
-
-- **Location**: `~/.gwt/config.toml`
-- **Format**: TOML
-
-#### First-time Setup
-
-When you run `gwt` for the first time, it will prompt you to create a configuration file interactively.
-
-1.  **Create Configuration File**: Confirm to create the file.
-2.  **Worktree Root**: Specify the directory where you want to store your worktrees. The default is `~/.gwt_store`.
-
-#### Configuration Options
-
-Currently, the configuration supports the following option:
-
-- `worktree_root`: The absolute path to the directory where all git worktrees will be stored.
-
-**Example `config.toml`:**
-
+Example `config.toml`:
 ```toml
 worktree_root = "/Users/username/.gwt_store"
 ```
 
-You can manually edit this file to change the worktree root location.
+## Development
 
----
+### Prerequisites
+- [Rust](https://www.rust-lang.org/tools/install) (Edition 2024)
+- [pre-commit](https://pre-commit.com/)
 
-### Testing & Development Tips 🧪
+### Setup
+```bash
+make setup-pre-commit
+```
 
-- Run unit & integration tests:
-
+### Running Tests
 ```bash
 cargo test
 ```
 
-- Integration tests require `git` available on PATH and will create temporary repositories and worktrees; they run in temporary directories and do not affect your local repos.
-
-- There is a testing hook to mock the `git` executable in integration tests by setting the `GWT_GIT` environment variable to point to a mock script. This is used in `tests/integration_switch.rs`.
-
-- Use `cargo run -- <command>` to try the binary locally without installing.
-
----
-
-If you'd like, we can add more examples (creating and removing worktrees, listing, etc.) as those commands are implemented.
-
-## Planned Features
-
-- **Centralized Configuration**: Define a root directory for all worktrees.
-- **Automated Navigation**: Seamlessly switch between worktrees with automatic directory changing.
-- **Rapid Lifecycle Management**: Efficient commands for creating and deleting worktrees.
-- **AI Integration**: Streamlined workflow to initialize a worktree and invoke an AI agent in a single step.
-
-## Development Setup
-
-This project uses [pre-commit](https://pre-commit.com/) to ensure code quality.
-
-### Prerequisites
-
-- [Rust](https://www.rust-lang.org/tools/install)
-- [pre-commit](https://pre-commit.com/#install)
-
-### Installation
-
-1. Install the pre-commit framework:
-   ```bash
-   pip install pre-commit
-   # or
-   brew install pre-commit
-   ```
-
-2. Install the git hooks:
-   ```bash
-   make setup-pre-commit
-   ```
-
-   Alternatively, you can run:
-   ```bash
-   pre-commit install
-   ```
-
-### Manual Usage
-
-You can run the checks manually at any time:
+### Manual Build
 ```bash
-pre-commit run --all-files
+cargo build --release
 ```
+
+## License
+Distributed under the MIT License. See `LICENSE` for more information.
