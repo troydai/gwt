@@ -1,6 +1,11 @@
 use crate::config;
 use crate::config::Config;
-use gwt::{WorktreeError, find_worktree_for_branch, list_worktrees};
+use gwt::{
+    WorktreeError, add_worktree, branch_exists, find_worktree_for_branch, git_toplevel,
+    list_worktrees,
+};
+use sha1::{Digest, Sha1};
+use std::fs;
 
 pub struct Switch {
     pub branch: String,
@@ -14,12 +19,23 @@ pub enum SwitchCommandError {
     ConfigError(#[from] config::ConfigError),
     #[error("Error ensuring worktree root exists: {0}")]
     WorktreeRootError(String),
-    #[error("Worktree for branch {0} doesn't exist.")]
-    WorktreeNotFound(String),
+    #[error("Branch {0} doesn't exist.")]
+    BranchNotFound(String),
+    #[error("Could not determine repository name from path {0}")]
+    RepoNameError(String),
+    #[error("Failed to create worktree: {0}")]
+    WorktreeCreateError(String),
     #[error("Git error: {0}")]
     GitError(String),
     #[error("Error listing worktrees: {0}")]
     ListError(WorktreeError),
+}
+
+fn compute_worktree_hash(repo_name: &str, branch_name: &str) -> String {
+    let mut hasher = Sha1::new();
+    hasher.update(format!("{repo_name}|{branch_name}"));
+    let digest = hasher.finalize();
+    format!("{digest:x}")[0..8].to_string()
 }
 
 pub fn handle_switch_command(cmd: &Switch) -> Result<(), SwitchCommandError> {
@@ -41,7 +57,47 @@ pub fn handle_switch_command(cmd: &Switch) -> Result<(), SwitchCommandError> {
                 println!("{}", w.path().display());
                 Ok(())
             }
-            None => Err(SwitchCommandError::WorktreeNotFound(cmd.branch.clone())),
+            None => {
+                let exists = branch_exists(&cmd.branch).map_err(|e| match e {
+                    WorktreeError::GitError(s) => SwitchCommandError::GitError(s),
+                    _ => SwitchCommandError::WorktreeCreateError(e.to_string()),
+                })?;
+                if !exists {
+                    return Err(SwitchCommandError::BranchNotFound(cmd.branch.clone()));
+                }
+
+                let toplevel = git_toplevel().map_err(|e| match e {
+                    WorktreeError::GitError(s) => SwitchCommandError::GitError(s),
+                    _ => SwitchCommandError::WorktreeCreateError(e.to_string()),
+                })?;
+                let repo_name = toplevel
+                    .file_name()
+                    .and_then(|s| s.to_str())
+                    .ok_or_else(|| {
+                        SwitchCommandError::RepoNameError(toplevel.display().to_string())
+                    })?
+                    .to_string();
+
+                let hash = compute_worktree_hash(&repo_name, &cmd.branch);
+                let target_path = config.worktree_root.join(repo_name).join(hash);
+
+                if let Some(parent) = target_path.parent() {
+                    fs::create_dir_all(parent).map_err(|e| {
+                        SwitchCommandError::WorktreeRootError(format!(
+                            "Failed to create directory '{}': {e}",
+                            parent.display()
+                        ))
+                    })?;
+                }
+
+                add_worktree(&target_path, &cmd.branch).map_err(|e| match e {
+                    WorktreeError::GitError(s) => SwitchCommandError::WorktreeCreateError(s),
+                    _ => SwitchCommandError::WorktreeCreateError(e.to_string()),
+                })?;
+
+                println!("{}", target_path.display());
+                Ok(())
+            }
         },
         Err(e) => match e {
             WorktreeError::GitError(s) => Err(SwitchCommandError::GitError(s)),

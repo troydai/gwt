@@ -1,5 +1,5 @@
-use std::path::PathBuf;
-use std::process::Command;
+use std::path::{Path, PathBuf};
+use std::process::{Command, Output};
 use thiserror::Error;
 
 /// Representation of a Git worktree
@@ -36,6 +36,61 @@ pub enum WorktreeError {
     Io(#[from] std::io::Error),
     #[error("Failed to parse git output: {0}")]
     ParseError(String),
+}
+
+fn git_cmd() -> String {
+    std::env::var("GWT_GIT").unwrap_or_else(|_| "git".to_string())
+}
+
+fn run_git(args: &[&str]) -> Result<Output, WorktreeError> {
+    Command::new(git_cmd())
+        .args(args)
+        .output()
+        .map_err(WorktreeError::Io)
+}
+
+/// Return the repository top-level directory (`git rev-parse --show-toplevel`).
+pub fn git_toplevel() -> Result<PathBuf, WorktreeError> {
+    let output = run_git(&["rev-parse", "--show-toplevel"])?;
+    if !output.status.success() {
+        return Err(WorktreeError::GitError(
+            String::from_utf8_lossy(&output.stderr).to_string(),
+        ));
+    }
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    Ok(PathBuf::from(stdout.trim()))
+}
+
+/// Check if a local branch exists (`refs/heads/<branch>`).
+pub fn branch_exists(branch: &str) -> Result<bool, WorktreeError> {
+    let ref_name = format!("refs/heads/{branch}");
+    let output = run_git(&["show-ref", "--verify", "--quiet", &ref_name])?;
+    if output.status.success() {
+        return Ok(true);
+    }
+    match output.status.code() {
+        Some(1) => Ok(false),
+        _ => Err(WorktreeError::GitError(
+            String::from_utf8_lossy(&output.stderr).to_string(),
+        )),
+    }
+}
+
+/// Create a worktree for the given branch at the provided path.
+pub fn add_worktree(path: &Path, branch: &str) -> Result<(), WorktreeError> {
+    let output = Command::new(git_cmd())
+        .args(["worktree", "add"])
+        .arg(path)
+        .arg(branch)
+        .output()
+        .map_err(WorktreeError::Io)?;
+
+    if !output.status.success() {
+        return Err(WorktreeError::GitError(
+            String::from_utf8_lossy(&output.stderr).to_string(),
+        ));
+    }
+    Ok(())
 }
 
 /// Parse `git worktree list --porcelain` output into a Vec<Worktree>
@@ -93,12 +148,7 @@ fn parse_porcelain(input: &str) -> Vec<Worktree> {
 /// The `GWT_GIT` environment variable can be used to override the `git` executable
 /// (useful for tests to inject a mock git program).
 pub fn list_worktrees() -> Result<Vec<Worktree>, WorktreeError> {
-    let git_cmd = std::env::var("GWT_GIT").unwrap_or_else(|_| "git".to_string());
-
-    let output = Command::new(&git_cmd)
-        .args(["worktree", "list", "--porcelain"])
-        .output()
-        .map_err(WorktreeError::Io)?;
+    let output = run_git(&["worktree", "list", "--porcelain"])?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();

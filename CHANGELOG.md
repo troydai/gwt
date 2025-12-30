@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 - Implemented `gwtree switch <branch>` command which prints the path of an existing worktree for the specified branch and exits with 0; prints an error and exits 1 if not found. 🔧
+- Updated `gwtree switch <branch>` to create a worktree when missing (under `<worktree_root>/<repo>/<hash>`), and only error when the branch does not exist. 🔧
 - Implemented `gwtree init <shell>` which emits shell-integration code for `bash`, `zsh`, and `fish` to allow `gwt` wrapper to `cd` into worktrees on success. 🔧
 - Added `make install` command for convenient local installation (macOS/Linux). 📦
 - Implemented `gwtree config view` command which displays the configuration file path and contents with colored output. This allows users to inspect their configuration without triggering an interactive setup process. 🎨
