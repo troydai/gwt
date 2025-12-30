@@ -1,0 +1,40 @@
+FROM rust:1.92-slim-bookworm
+
+LABEL org.opencontainers.image.description="GWT playground environment for testing"
+LABEL org.opencontainers.image.source="https://github.com/troydai/gwt"
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    bash \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+
+# Copy manifests first for better caching
+COPY Cargo.toml Cargo.lock ./
+COPY src/ src/
+
+# Build release binary
+RUN cargo build --release
+
+# Copy binary to a standard location
+RUN cp target/release/gwtree /usr/local/bin/gwtree
+
+# Create non-root user
+RUN useradd -m -s /bin/bash developer
+
+# Switch to non-root user
+USER developer
+WORKDIR /home/developer
+
+# Configure git (required for git operations)
+RUN git config --global user.email "developer@playground.local" \
+    && git config --global user.name "Developer"
+
+# Set up shell integration
+RUN echo 'eval "$(gwtree init bash)"' >> ~/.bashrc
+
+CMD ["/bin/bash"]
