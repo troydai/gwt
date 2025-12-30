@@ -40,7 +40,7 @@ fn load_with_home(cmd: &command::Commands, home: &Path) -> Result<Config> {
         return Ok(Config::Loaded(result, config_path));
     }
 
-    println!("gwt configuration not found at {}", config_path.display());
+    eprintln!("gwt configuration not found at {}", config_path.display());
 
     let should_create = Confirm::with_theme(&prompt_theme())
         .with_prompt("Would you like to create a configuration file now?")
@@ -63,7 +63,7 @@ fn load_with_home(cmd: &command::Commands, home: &Path) -> Result<Config> {
     };
 
     d.save(&config_path)?;
-    println!("Configuration saved to {}", config_path.display());
+    eprintln!("Configuration saved to {}", config_path.display());
 
     let config = Config::Loaded(d, config_path);
     config.ensure_worktree_root()?;
@@ -109,7 +109,7 @@ impl Config {
         }
 
         fs::create_dir_all(&d.worktree_root)?;
-        println!("Created directory: {}", d.worktree_root.display());
+        eprintln!("Created directory: {}", d.worktree_root.display());
 
         Ok(())
     }
