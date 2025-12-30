@@ -31,17 +31,6 @@ enum Commands {
     },
 }
 
-fn handle_error(e: impl std::fmt::Display) -> ! {
-    eprintln!("{}", e);
-    exit(1);
-}
-
-fn handle_result<T, E: std::fmt::Display>(result: Result<T, E>) {
-    if let Err(e) = result {
-        handle_error(e);
-    }
-}
-
 fn main() {
     let cli = Cli::parse();
 
@@ -50,10 +39,12 @@ fn main() {
     if !matches!(&cli.command, Commands::Init { .. }) {
         match config::Config::init() {
             Err(config::ConfigError::SetupCancelled) => {
-                handle_error("Setup cancelled. Run gwt again to configure.");
+                eprintln!("Setup cancelled. Run gwt again to configure.");
+                exit(1);
             }
             Err(e) => {
-                handle_error(format!("Configuration error: {}", e));
+                eprintln!("Configuration error: {}", e);
+                exit(1);
             }
             Ok(_) => {}
         }
@@ -61,19 +52,28 @@ fn main() {
 
     match &cli.command {
         Commands::Config(config_cmd) => {
-            handle_result(command::config::handle_config_command(config_cmd));
+            if let Err(e) = command::config::handle_config_command(config_cmd) {
+                eprintln!("{}", e);
+                exit(1);
+            }
         }
         Commands::Switch { branch } => {
             let switch_cmd = command::worktree::Switch {
                 branch: branch.clone(),
             };
-            handle_result(command::worktree::handle_switch_command(&switch_cmd));
+            if let Err(e) = command::worktree::handle_switch_command(&switch_cmd) {
+                eprintln!("{}", e);
+                exit(1);
+            }
         }
         Commands::Init { shell } => {
             let init_cmd = command::shell::Init {
                 shell: shell.clone(),
             };
-            handle_result(command::shell::handle_init_command(&init_cmd));
+            if let Err(e) = command::shell::handle_init_command(&init_cmd) {
+                eprintln!("{}", e);
+                exit(1);
+            }
         }
     }
 }
