@@ -14,9 +14,12 @@ pub enum ConfigCommandError {
     #[error("Error getting config file path: {0}")]
     ConfigPathError(#[from] config::ConfigError),
     #[error("Config file does not exist at {0}")]
+    #[allow(dead_code)] // Used in tests
     ConfigNotFound(std::path::PathBuf),
     #[error("Error reading config file: {0}")]
     ReadError(#[from] std::io::Error),
+    #[error("Setup cancelled by user")]
+    SetupCancelled,
 }
 
 pub fn handle_config_command(cmd: &ConfigCommands) -> Result<(), ConfigCommandError> {
@@ -33,7 +36,11 @@ pub fn handle_config_command(cmd: &ConfigCommands) -> Result<(), ConfigCommandEr
     );
 
     if !config_path.exists() {
-        return Err(ConfigCommandError::ConfigNotFound(config_path));
+        // Prompt user to create the config file
+        config::Config::interactive_setup().map_err(|e| match e {
+            config::ConfigError::SetupCancelled => ConfigCommandError::SetupCancelled,
+            e => ConfigCommandError::ConfigPathError(e),
+        })?;
     }
 
     let contents = std::fs::read_to_string(&config_path)?;
