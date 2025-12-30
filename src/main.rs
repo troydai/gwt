@@ -1,5 +1,6 @@
 mod command;
 mod config;
+mod utility;
 
 use crate::command::{Cli, Commands};
 use anyhow::Result;
