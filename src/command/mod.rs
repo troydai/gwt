@@ -1,4 +1,5 @@
 pub mod config;
+pub mod current;
 pub mod shell;
 pub mod worktree;
 
@@ -50,4 +51,8 @@ pub enum Commands {
         /// Shell name
         shell: String,
     },
+
+    /// Print current worktree and branch information
+    #[command(alias = "c")]
+    Current,
 }
