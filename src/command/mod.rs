@@ -19,6 +19,9 @@ pub enum Commands {
     #[command(subcommand)]
     Config(config::ConfigCommands),
 
+    /// List all worktrees
+    Ls,
+
     /// Switch to an existing worktree for a branch (prints path on success)
     Sw {
         /// Branch name to switch to
