@@ -31,49 +31,49 @@ enum Commands {
     },
 }
 
+fn handle_error(e: impl std::fmt::Display) -> ! {
+    eprintln!("{}", e);
+    exit(1);
+}
+
+fn handle_result<T, E: std::fmt::Display>(result: Result<T, E>) {
+    if let Err(e) = result {
+        handle_error(e);
+    }
+}
+
 fn main() {
     let cli = Cli::parse();
 
     // Initialize config for all commands except Init (will prompt if missing)
     // Note: clap handles --help and help subcommand before we reach here
     if !matches!(&cli.command, Commands::Init { .. }) {
-        if let Err(e) = config::Config::init() {
-            match e {
-                config::ConfigError::SetupCancelled => {
-                    eprintln!("Setup cancelled. Run gwt again to configure.");
-                }
-                _ => {
-                    eprintln!("Configuration error: {}", e);
-                }
+        match config::Config::init() {
+            Err(config::ConfigError::SetupCancelled) => {
+                handle_error("Setup cancelled. Run gwt again to configure.");
             }
-            exit(1);
+            Err(e) => {
+                handle_error(format!("Configuration error: {}", e));
+            }
+            Ok(_) => {}
         }
     }
 
     match &cli.command {
         Commands::Config(config_cmd) => {
-            if let Err(e) = command::config::handle_config_command(config_cmd) {
-                eprintln!("{}", e);
-                exit(1);
-            }
+            handle_result(command::config::handle_config_command(config_cmd));
         }
         Commands::Switch { branch } => {
             let switch_cmd = command::worktree::Switch {
                 branch: branch.clone(),
             };
-            if let Err(e) = command::worktree::handle_switch_command(&switch_cmd) {
-                eprintln!("{}", e);
-                exit(1);
-            }
+            handle_result(command::worktree::handle_switch_command(&switch_cmd));
         }
         Commands::Init { shell } => {
             let init_cmd = command::shell::Init {
                 shell: shell.clone(),
             };
-            if let Err(e) = command::shell::handle_init_command(&init_cmd) {
-                eprintln!("{}", e);
-                exit(1);
-            }
+            handle_result(command::shell::handle_init_command(&init_cmd));
         }
     }
 }
