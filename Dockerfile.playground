@@ -1,17 +1,4 @@
-# Stage 1: Build the binary
-FROM rust:1.92-slim-bookworm AS builder
-
-WORKDIR /build
-
-# Copy manifests first for better caching
-COPY Cargo.toml Cargo.lock ./
-COPY src/ src/
-
-# Build release binary
-RUN cargo build --release
-
-# Stage 2: Runtime image
-FROM debian:bookworm-slim
+FROM rust:1.92-slim-bookworm
 
 LABEL org.opencontainers.image.description="GWT playground environment for testing"
 LABEL org.opencontainers.image.source="https://github.com/troydai/gwt"
@@ -24,8 +11,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy binary from builder
-COPY --from=builder /build/target/release/gwtree /usr/local/bin/gwtree
+WORKDIR /build
+
+# Copy manifests first for better caching
+COPY Cargo.toml Cargo.lock ./
+COPY src/ src/
+
+# Build release binary
+RUN cargo build --release
+
+# Copy binary to a standard location
+RUN cp target/release/gwtree /usr/local/bin/gwtree
 
 # Create non-root user
 RUN useradd -m -s /bin/bash developer
