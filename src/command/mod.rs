@@ -24,11 +24,16 @@ pub enum Commands {
     /// Switch to an existing worktree for a branch (prints path on success)
     Sw {
         /// Branch name to switch to
-        branch: String,
+        #[arg(required_unless_present = "main", conflicts_with = "main")]
+        branch: Option<String>,
 
         /// Create a new branch
         #[arg(short = 'b', long = "create-branch")]
         create: bool,
+
+        /// Switch to the main branch (main or master)
+        #[arg(short = 'm', long = "main")]
+        main: bool,
     },
 
     /// Output shell integration code for a given shell (bash, zsh, fish)
