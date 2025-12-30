@@ -100,6 +100,25 @@ $ pwd
 
 ---
 
+#### `gwt current` (alias: `gwt c`)
+
+Displays information about the current Git worktree and branch. This is useful for quickly checking which branch you're on and which worktree directory you're working in.
+
+The command outputs:
+- The current branch name (or `(detached)` if HEAD is detached) - highlighted in green (yellow for detached)
+- The absolute path to the current worktree root directory - highlighted in cyan
+
+**Example:**
+```bash
+$ gwt current
+Branch main @ Worktree /home/user/my-repo
+
+$ gwt c  # Using the alias
+Branch feature/my-feature @ Worktree /home/user/.gwt_store/a1b2c3d4e5f6g7h8
+```
+
+---
+
 #### `gwt config view`
 Displays the location and current contents of your configuration file. This is useful for verifying where your worktrees are being stored.
 

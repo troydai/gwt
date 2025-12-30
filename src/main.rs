@@ -15,5 +15,6 @@ fn main() -> Result<()> {
         Commands::Ls => command::worktree::list(&config),
         Commands::Sw { branch, create } => command::worktree::switch(&config, &branch, create),
         Commands::Init { shell } => command::shell::handle(&shell),
+        Commands::Current => command::current::handle(),
     }
 }
