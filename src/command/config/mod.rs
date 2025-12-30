@@ -16,10 +16,7 @@ pub enum ConfigCommands {
 pub fn handle(config: &Config, cmd: &ConfigCommands) -> Result<()> {
     match cmd {
         ConfigCommands::View => view_config(config),
-        ConfigCommands::Setup => {
-            config::setup()?;
-            Ok(())
-        }
+        ConfigCommands::Setup => config::setup(),
     }
 }
 

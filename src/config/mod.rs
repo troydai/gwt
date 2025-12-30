@@ -28,7 +28,7 @@ pub fn load(cmd: &command::Commands) -> Result<Config> {
     load_with_home(cmd, &home)
 }
 
-pub fn setup() -> Result<Config> {
+pub fn setup() -> Result<()> {
     let home = home_dir()?;
     let d = prompt_for_config_data(&home)?;
 
@@ -39,7 +39,7 @@ pub fn setup() -> Result<Config> {
     let config = Config::Loaded(d, config_path);
     config.ensure_worktree_root()?;
 
-    Ok(config)
+    Ok(())
 }
 
 fn load_with_home(cmd: &command::Commands, home: &Path) -> Result<Config> {
