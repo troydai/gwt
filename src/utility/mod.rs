@@ -15,59 +15,53 @@ impl Git {
         }
     }
 
-    pub fn run(&self, args: &[&str]) -> Result<Output> {
+    fn run_raw(&self, args: &[&str]) -> Result<Output> {
         Command::new(&self.exec)
             .args(args)
             .output()
             .map_err(|e| anyhow!("git error: {e}"))
     }
 
+    pub fn run(&self, args: &[&str]) -> Result<Output> {
+        let output = self.run_raw(args)?;
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            bail!("git error: {stderr}");
+        }
+        Ok(output)
+    }
+
     pub fn get_current_branch(&self) -> Result<String> {
         let output = self.run(&["branch", "--show-current"])?;
-        if !output.status.success() {
-            bail!("Git error: {}", String::from_utf8_lossy(&output.stderr));
-        }
         let stdout = String::from_utf8_lossy(&output.stdout);
         Ok(stdout.trim().to_string())
     }
 
     pub fn list_worktrees(&self) -> Result<Vec<Worktree>> {
         let output = self.run(&["worktree", "list", "--porcelain"])?;
-
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-            bail!("failed git execution: {stderr}");
-        }
-
         let stdout = String::from_utf8_lossy(&output.stdout);
         Ok(parse_porcelain(&stdout))
     }
 
     pub fn branch_exists(&self, branch: &str) -> Result<bool> {
         let ref_name = format!("refs/heads/{branch}");
-        let output = self.run(&["show-ref", "--verify", "--quiet", &ref_name])?;
+        let output = self.run_raw(&["show-ref", "--verify", "--quiet", &ref_name])?;
         if output.status.success() {
             return Ok(true);
         }
         if output.status.code().is_some_and(|c| c == 1) {
             return Ok(false);
         }
-        bail!("Git error: {}", String::from_utf8_lossy(&output.stderr))
+        bail!("git error: {}", String::from_utf8_lossy(&output.stderr))
     }
 
     pub fn add_worktree(&self, path: &str, branch: &str) -> Result<()> {
-        let output = self.run(&["worktree", "add", path, branch])?;
-        if !output.status.success() {
-            bail!("Git error: {}", String::from_utf8_lossy(&output.stderr));
-        }
+        self.run(&["worktree", "add", path, branch])?;
         Ok(())
     }
 
     pub fn git_toplevel(&self) -> Result<PathBuf> {
         let output = self.run(&["rev-parse", "--show-toplevel"])?;
-        if !output.status.success() {
-            bail!("Git error: {}", String::from_utf8_lossy(&output.stderr));
-        }
         let stdout = String::from_utf8_lossy(&output.stdout);
         Ok(PathBuf::from(stdout.trim()))
     }
