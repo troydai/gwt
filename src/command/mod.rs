@@ -24,7 +24,7 @@ pub enum Commands {
         branch: String,
 
         /// Create a new branch
-        #[arg(short, long)]
+        #[arg(short = 'b', long = "branch")]
         create: bool,
     },
 
