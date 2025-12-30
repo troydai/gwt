@@ -13,7 +13,11 @@ fn main() -> Result<()> {
     match cli.command {
         Commands::Config(config_command) => command::config::handle(&config, &config_command),
         Commands::Ls => command::worktree::list(&config),
-        Commands::Sw { branch, create } => command::worktree::switch(&config, &branch, create),
+        Commands::Sw {
+            branch,
+            create,
+            main,
+        } => command::worktree::switch(&config, branch.as_deref(), create, main),
         Commands::Rm {
             branch,
             delete_branch,

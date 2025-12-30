@@ -27,15 +27,24 @@ pub fn list(config: &Config) -> Result<()> {
     Ok(())
 }
 
-pub fn switch(config: &Config, branch: &str, create: bool) -> Result<()> {
+pub fn switch(config: &Config, branch: Option<&str>, create: bool, use_main: bool) -> Result<()> {
     config.ensure_worktree_root()?;
 
     let git = Git::new();
 
-    if git.get_current_branch().is_ok_and(|c| c == branch) {
+    // Resolve the branch name based on the flag
+    let target_branch = if use_main {
+        resolve_main_branch(&git)?
+    } else {
+        branch
+            .ok_or_else(|| anyhow!("Branch name is required"))?
+            .to_string()
+    };
+
+    if git.get_current_branch().is_ok_and(|c| c == target_branch) {
         eprintln!(
             "{}",
-            style(format!("You are already on branch '{}'.", branch)).yellow()
+            style(format!("You are already on branch '{}'.", target_branch)).yellow()
         );
         std::process::exit(1);
     }
@@ -43,10 +52,10 @@ pub fn switch(config: &Config, branch: &str, create: bool) -> Result<()> {
     let wt_path = git
         .list_worktrees()?
         .iter()
-        .find(|wt| wt.branch().is_some_and(|v| v == branch))
+        .find(|wt| wt.branch().is_some_and(|v| v == target_branch))
         .map(|wt| wt.path().clone())
         .map_or_else(
-            || create_worktree_and_print_path(&git, config, branch, create),
+            || create_worktree_and_print_path(&git, config, &target_branch, create),
             Ok,
         )?;
 
@@ -183,6 +192,20 @@ fn compute_worktree_hash(repo_name: &str, branch_name: &str) -> String {
     hasher.update(format!("{repo_name}|{branch_name}"));
     let digest = hasher.finalize();
     format!("{digest:x}")[0..16].to_string()
+}
+
+fn resolve_main_branch(git: &Git) -> Result<String> {
+    // Check if 'main' exists first
+    if git.branch_exists("main")? {
+        return Ok("main".to_string());
+    }
+
+    // Fall back to 'master'
+    if git.branch_exists("master")? {
+        return Ok("master".to_string());
+    }
+
+    bail!("Neither 'main' nor 'master' branch exists")
 }
 
 // Helper functions
@@ -369,6 +392,143 @@ fi
 
         let result = list(&config);
         assert!(result.is_ok());
+
+        unsafe {
+            std::env::remove_var("GWT_GIT");
+        }
+    }
+
+    #[test]
+    fn test_resolve_main_branch_when_only_main_exists() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        let script = r#"#!/bin/sh
+case "$@" in
+    "for-each-ref --format=%(refname) refs/heads/main")
+        echo "refs/heads/main"
+        exit 0
+        ;;
+    "for-each-ref --format=%(refname) refs/heads/master")
+        exit 0
+        ;;
+    *)
+        echo "unexpected args: $@" >&2
+        exit 1
+        ;;
+esac
+"#;
+        let (mock_git, _dir) = create_mock_git_script(script);
+        unsafe {
+            std::env::set_var("GWT_GIT", &mock_git);
+        }
+
+        let git = Git::new();
+        let result = resolve_main_branch(&git);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "main");
+
+        unsafe {
+            std::env::remove_var("GWT_GIT");
+        }
+    }
+
+    #[test]
+    fn test_resolve_main_branch_when_only_master_exists() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        let script = r#"#!/bin/sh
+case "$@" in
+    "for-each-ref --format=%(refname) refs/heads/main")
+        exit 0
+        ;;
+    "for-each-ref --format=%(refname) refs/heads/master")
+        echo "refs/heads/master"
+        exit 0
+        ;;
+    *)
+        echo "unexpected args: $@" >&2
+        exit 1
+        ;;
+esac
+"#;
+        let (mock_git, _dir) = create_mock_git_script(script);
+        unsafe {
+            std::env::set_var("GWT_GIT", &mock_git);
+        }
+
+        let git = Git::new();
+        let result = resolve_main_branch(&git);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "master");
+
+        unsafe {
+            std::env::remove_var("GWT_GIT");
+        }
+    }
+
+    #[test]
+    fn test_resolve_main_branch_when_both_exist_prefer_main() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        let script = r#"#!/bin/sh
+case "$@" in
+    "for-each-ref --format=%(refname) refs/heads/main")
+        echo "refs/heads/main"
+        exit 0
+        ;;
+    "for-each-ref --format=%(refname) refs/heads/master")
+        echo "refs/heads/master"
+        exit 0
+        ;;
+    *)
+        echo "unexpected args: $@" >&2
+        exit 1
+        ;;
+esac
+"#;
+        let (mock_git, _dir) = create_mock_git_script(script);
+        unsafe {
+            std::env::set_var("GWT_GIT", &mock_git);
+        }
+
+        let git = Git::new();
+        let result = resolve_main_branch(&git);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "main");
+
+        unsafe {
+            std::env::remove_var("GWT_GIT");
+        }
+    }
+
+    #[test]
+    fn test_resolve_main_branch_when_neither_exists() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        let script = r#"#!/bin/sh
+case "$@" in
+    "for-each-ref --format=%(refname) refs/heads/main")
+        exit 0
+        ;;
+    "for-each-ref --format=%(refname) refs/heads/master")
+        exit 0
+        ;;
+    *)
+        echo "unexpected args: $@" >&2
+        exit 1
+        ;;
+esac
+"#;
+        let (mock_git, _dir) = create_mock_git_script(script);
+        unsafe {
+            std::env::set_var("GWT_GIT", &mock_git);
+        }
+
+        let git = Git::new();
+        let result = resolve_main_branch(&git);
+        assert!(result.is_err());
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("Neither 'main' nor 'master' branch exists")
+        );
 
         unsafe {
             std::env::remove_var("GWT_GIT");

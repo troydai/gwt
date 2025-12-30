@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file.
   - Optional `-b` / `--delete-branch` flag to delete the branch after removing the worktree.
   - Optional `-B` / `--force-delete-branch` flag for force branch deletion (equivalent to `git branch -D`).
   - Updated shell integration for bash, zsh, and fish to handle automatic directory switching for the `rm` command.
+- Added `-m` / `--main` flag to `gwt sw` command to quickly switch to the primary branch (main or master) without specifying its name. GWT automatically detects and prefers `main` if it exists, falling back to `master` if only the latter is present.
 - Added `gwt current` (alias: `gwt c`) command to display the current branch and worktree directory information. Shows "(detached)" when HEAD is detached. Output includes color highlighting: green for branch names, yellow for detached HEAD, and cyan for worktree paths.
 - Added `gwt ls` command to list all worktrees in the format `{path} {head} [{branch}]`, providing a concise alternative to `git worktree list`.
 - Added `gwt config setup` command to allow users to interactively set up or reset the configuration.

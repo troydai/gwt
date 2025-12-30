@@ -73,7 +73,7 @@ This will build a container with GWT pre-installed and drop you into a shell whe
 
 ### Commands
 
-#### `gwt sw <branch> [-b|--create-branch]` (Switch)
+#### `gwt sw <branch> [-b|--create-branch] [-m|--main]` (Switch)
 
 The `sw` (switch) command is the heart of GWT. It combines worktree discovery, creation, and directory navigation into a single seamless operation.
 
@@ -83,6 +83,7 @@ The `sw` (switch) command is the heart of GWT. It combines worktree discovery, c
     - It uses a deterministic hashing algorithm to ensure the worktree path is stable and unique to that repository/branch combination.
     - Once created, it immediately moves your shell into that new directory.
 - **New Branch Creation**: With the `-b` or `--create-branch` flag, GWT will create the branch for you if it doesn't already exist.
+- **Main Branch Shortcut**: Use the `-m` or `--main` flag to quickly switch to the primary branch without specifying its name. GWT will automatically detect and use `main` if it exists, falling back to `master` if only the latter is present.
 - **Safe Transitions**: GWT checks if you are already on the target branch or if the branch exists before making any changes, preventing accidental state issues. Informational messages are printed to `stderr` to keep `stdout` clean for path-based navigation.
 
 **Example:**
@@ -96,6 +97,10 @@ Created worktree for branch 'feature-api-v2' at '/Users/me/.gwt_store/a1b2c3d4e5
 # You are now automatically navigated to the worktree directory
 $ pwd
 /Users/me/.gwt_store/a1b2c3d4e5f6g7h8
+
+# Quickly switch to the main branch (main or master)
+$ gwt sw -m
+# Automatically switches to 'main' if it exists, or 'master' as fallback
 ```
 
 ---
