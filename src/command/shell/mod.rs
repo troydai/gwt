@@ -9,15 +9,23 @@ fn generate_init(shell: &str) -> Result<String> {
     match shell {
         "bash" | "zsh" => Ok(r#"gwt() {
     if [ "$1" = "switch" ] || [ "$1" = "sw" ]; then
+        for arg in "$@"; do
+            if [ "$arg" = "--help" ] || [ "$arg" = "-h" ]; then
+                command gwtree "$@"
+                return
+            fi
+        done
         local result
         result=$(command gwtree sw "${@:2}")
         local exit_code=$?
         if [ $exit_code -eq 0 ]; then
             if [ -d "$result" ]; then
                 cd "$result" || return 1
+            else
+                printf "%s\n" "$result"
             fi
         else
-            echo "$result" >&2
+            printf "%s\n" "$result" >&2
             return $exit_code
         fi
     else
@@ -28,14 +36,22 @@ fn generate_init(shell: &str) -> Result<String> {
         .to_string()),
         "fish" => Ok(r#"function gwt
     if test "$argv[1]" = "switch" -o "$argv[1]" = "sw"
+        for arg in $argv
+            if test "$arg" = "--help" -o "$arg" = "-h"
+                command gwtree $argv
+                return
+            fi
+        end
         set result (command gwtree sw $argv[2..-1])
         set exit_code $status
         if test $exit_code -eq 0
             if test -d "$result"
                 cd "$result" || return 1
+            else
+                printf "%s\n" $result
             end
         else
-            echo $result >&2
+            printf "%s\n" $result >&2
             return $exit_code
         end
     else
