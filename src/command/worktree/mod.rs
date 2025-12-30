@@ -7,7 +7,25 @@ use std::path::PathBuf;
 
 use console::style;
 
-pub fn handle(config: &Config, branch: &str, create: bool) -> Result<()> {
+pub fn list(config: &Config) -> Result<()> {
+    config.ensure_worktree_root()?;
+
+    let git = Git::new();
+    let worktrees = git.list_worktrees()?;
+
+    for wt in worktrees {
+        let path = wt.path().display();
+        let head = wt.head();
+        match wt.branch() {
+            Some(branch) => println!("{} {} [{}]", path, head, branch),
+            None => println!("{} {}", path, head),
+        }
+    }
+
+    Ok(())
+}
+
+pub fn switch(config: &Config, branch: &str, create: bool) -> Result<()> {
     config.ensure_worktree_root()?;
 
     let git = Git::new();
@@ -204,6 +222,82 @@ esac
 
         let git = Git::new();
         let result = create_worktree_and_print_path(&git, &config, "new-branch", true);
+        assert!(result.is_ok());
+
+        unsafe {
+            std::env::remove_var("GWT_GIT");
+        }
+    }
+
+    #[test]
+    fn test_list_worktrees() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        let script = r#"#!/bin/sh
+if [ "$1" = "worktree" ] && [ "$2" = "list" ] && [ "$3" = "--porcelain" ]; then
+    echo "worktree /path/to/main
+HEAD abc123
+branch refs/heads/main
+
+worktree /path/to/feature
+HEAD def456
+branch refs/heads/feature-branch"
+    exit 0
+else
+    echo "unexpected args: $@" >&2
+    exit 1
+fi
+"#;
+        let (mock_git, _dir) = create_mock_git_script(script);
+        unsafe {
+            std::env::set_var("GWT_GIT", &mock_git);
+        }
+
+        let config = Config::Loaded(
+            ConfigData {
+                worktree_root: PathBuf::from("/tmp/wt-root"),
+            },
+            PathBuf::from("/tmp/config"),
+        );
+
+        let result = list(&config);
+        assert!(result.is_ok());
+
+        unsafe {
+            std::env::remove_var("GWT_GIT");
+        }
+    }
+
+    #[test]
+    fn test_list_worktrees_with_detached() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        let script = r#"#!/bin/sh
+if [ "$1" = "worktree" ] && [ "$2" = "list" ] && [ "$3" = "--porcelain" ]; then
+    echo "worktree /path/to/main
+HEAD abc123
+branch refs/heads/main
+
+worktree /path/to/detached
+HEAD ghi789
+detached"
+    exit 0
+else
+    echo "unexpected args: $@" >&2
+    exit 1
+fi
+"#;
+        let (mock_git, _dir) = create_mock_git_script(script);
+        unsafe {
+            std::env::set_var("GWT_GIT", &mock_git);
+        }
+
+        let config = Config::Loaded(
+            ConfigData {
+                worktree_root: PathBuf::from("/tmp/wt-root"),
+            },
+            PathBuf::from("/tmp/config"),
+        );
+
+        let result = list(&config);
         assert!(result.is_ok());
 
         unsafe {
