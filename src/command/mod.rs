@@ -19,7 +19,7 @@ pub enum Commands {
     Config(config::ConfigCommands),
 
     /// Switch to an existing worktree for a branch (prints path on success)
-    Switch {
+    Sw {
         /// Branch name to switch to
         branch: String,
     },

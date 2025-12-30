@@ -8,9 +8,9 @@ pub fn handle(shell: &str) -> Result<()> {
 fn generate_init(shell: &str) -> Result<String> {
     match shell {
         "bash" | "zsh" => Ok(r#"gwt() {
-    if [ "$1" = "switch" ]; then
+    if [ "$1" = "switch" ] || [ "$1" = "sw" ]; then
         local result
-        result=$(command gwtree switch "${@:2}")
+        result=$(command gwtree sw "${@:2}")
         local exit_code=$?
         if [ $exit_code -eq 0 ]; then
             if [ -d "$result" ]; then
@@ -27,8 +27,8 @@ fn generate_init(shell: &str) -> Result<String> {
 "#
         .to_string()),
         "fish" => Ok(r#"function gwt
-    if test "$argv[1]" = "switch"
-        set result (command gwtree switch (echo $argv | sed 's/^switch //'))
+    if test "$argv[1]" = "switch" -o "$argv[1]" = "sw"
+        set result (command gwtree sw $argv[2..-1])
         set exit_code $status
         if test $exit_code -eq 0
             if test -d "$result"
@@ -59,6 +59,7 @@ mod tests {
         let s = generate_init("bash").unwrap();
         assert!(s.contains("gwt() {"));
         assert!(s.contains("command gwtree"));
+        assert!(s.contains(r#"[ "$1" = "switch" ] || [ "$1" = "sw" ]"#));
     }
 
     #[test]
@@ -66,6 +67,15 @@ mod tests {
         let s = generate_init("zsh").unwrap();
         assert!(s.contains("gwt() {"));
         assert!(s.contains("command gwtree"));
+        assert!(s.contains(r#"[ "$1" = "switch" ] || [ "$1" = "sw" ]"#));
+    }
+
+    #[test]
+    fn generate_fish_init_contains_function() {
+        let s = generate_init("fish").unwrap();
+        assert!(s.contains("function gwt"));
+        assert!(s.contains("command gwtree"));
+        assert!(s.contains(r#"test "$argv[1]" = "switch" -o "$argv[1]" = "sw""#));
     }
 
     #[test]
