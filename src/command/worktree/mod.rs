@@ -1,6 +1,5 @@
 use crate::config::Config;
 use crate::utility::Git;
-use crate::utility::Worktree;
 use anyhow::{Context, Result, anyhow, bail};
 use sha1::{Digest, Sha1};
 use std::fs;
@@ -10,12 +9,12 @@ pub fn handle(config: &Config, branch: &str) -> Result<()> {
     config.ensure_worktree_root()?;
 
     let git = Git::new();
-    let wts = git.list_worktrees()?;
-
-    let wt_path = match find_worktree_for_branch(&wts, branch) {
-        Some(path) => path,
-        None => create_worktree_and_print_path(&git, config, branch)?,
-    };
+    let wt_path = git
+        .list_worktrees()?
+        .iter()
+        .find(|wt| wt.branch().is_some_and(|v| v == branch))
+        .map(|wt| wt.path().clone())
+        .map_or_else(|| create_worktree_and_print_path(&git, config, branch), Ok)?;
 
     println!("{}", wt_path.display());
     Ok(())
@@ -67,20 +66,12 @@ fn compute_worktree_hash(repo_name: &str, branch_name: &str) -> String {
     format!("{digest:x}")[0..16].to_string()
 }
 
-pub fn find_worktree_for_branch(worktrees: &[Worktree], branch: &str) -> Option<PathBuf> {
-    worktrees
-        .iter()
-        .find(|wt| wt.branch().is_some_and(|v| v == branch))
-        .map(|wt| wt.path().clone())
-}
-
 // Helper functions
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::config::ConfigData;
-    use crate::utility::parse_porcelain;
     use std::path::PathBuf;
     use std::sync::Mutex;
     use tempfile::tempdir;
@@ -99,24 +90,6 @@ mod tests {
         }
 
         (mock_git, dir)
-    }
-
-    #[test]
-    fn find_worktree_by_branch() {
-        let input = "worktree /path/to/main
-HEAD abc123
-branch refs/heads/main
-
-worktree /path/to/feature
-HEAD def456
-branch refs/heads/feature-branch
-";
-
-        let parsed = parse_porcelain(input);
-        let found = find_worktree_for_branch(&parsed, "feature-branch");
-        assert!(found.is_some());
-        let w = found.unwrap();
-        assert_eq!(w, PathBuf::from("/path/to/feature"));
     }
 
     #[test]
