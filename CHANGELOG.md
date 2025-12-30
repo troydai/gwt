@@ -6,11 +6,19 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- Added `gwt rm <branch>` command to remove worktrees by branch name instead of directory paths.
+  - Automatically switches to the main worktree if currently inside the worktree being removed.
+  - Interactive confirmation before deletion to prevent accidental removals.
+  - Optional `-b` / `--delete-branch` flag to delete the branch after removing the worktree.
+  - Optional `-B` / `--force-delete-branch` flag for force branch deletion (equivalent to `git branch -D`).
+  - Updated shell integration for bash, zsh, and fish to handle automatic directory switching for the `rm` command.
 - Added `gwt ls` command to list all worktrees in the format `{path} {head} [{branch}]`, providing a concise alternative to `git worktree list`.
 - Added `gwt config setup` command to allow users to interactively set up or reset the configuration.
 
 ### Internal
 
+- Added new Git utility methods: `remove_worktree()`, `delete_branch()`, `get_main_worktree()`, and `find_worktree_by_branch()`.
+- Added comprehensive unit tests for worktree removal functionality.
 - Refactored worktree module by renaming `handle` function to `switch` for better clarity.
 - Refactored configuration loading logic to separate interactive prompting from the main loading flow.
 - Simplified `setup` function return type and improved modularity in `src/config/mod.rs`.

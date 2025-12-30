@@ -31,6 +31,20 @@ pub enum Commands {
         create: bool,
     },
 
+    /// Remove a worktree by branch name
+    Rm {
+        /// Branch name of the worktree to remove
+        branch: String,
+
+        /// Delete the branch after removing the worktree
+        #[arg(short = 'b', long = "delete-branch")]
+        delete_branch: bool,
+
+        /// Force delete the branch (use -D instead of -d)
+        #[arg(short = 'B', long = "force-delete-branch")]
+        force_delete_branch: bool,
+    },
+
     /// Output shell integration code for a given shell (bash, zsh, fish)
     Init {
         /// Shell name

@@ -14,6 +14,11 @@ fn main() -> Result<()> {
         Commands::Config(config_command) => command::config::handle(&config, &config_command),
         Commands::Ls => command::worktree::list(&config),
         Commands::Sw { branch, create } => command::worktree::switch(&config, &branch, create),
+        Commands::Rm {
+            branch,
+            delete_branch,
+            force_delete_branch,
+        } => command::worktree::remove(&config, &branch, delete_branch, force_delete_branch),
         Commands::Init { shell } => command::shell::handle(&shell),
     }
 }

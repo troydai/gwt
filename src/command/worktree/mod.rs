@@ -4,8 +4,10 @@ use anyhow::{Context, Result, anyhow, bail};
 use sha1::{Digest, Sha1};
 use std::fs;
 use std::path::PathBuf;
+use std::env;
 
 use console::style;
+use dialoguer::Confirm;
 
 pub fn list(config: &Config) -> Result<()> {
     config.ensure_worktree_root()?;
@@ -91,6 +93,74 @@ fn create_worktree_and_print_path(
     );
 
     Ok(target_path)
+}
+
+pub fn remove(
+    config: &Config,
+    branch: &str,
+    delete_branch: bool,
+    force_delete_branch: bool,
+) -> Result<()> {
+    config.ensure_worktree_root()?;
+
+    let git = Git::new();
+
+    // Find the worktree for this branch
+    let worktree = git
+        .find_worktree_by_branch(branch)?
+        .ok_or_else(|| anyhow!("No worktree found for branch '{}'", branch))?;
+
+    let worktree_path = worktree.path();
+
+    // Check if we're currently in the worktree being removed
+    let current_dir = env::current_dir().context("Failed to get current directory")?;
+    let need_to_switch = current_dir.starts_with(worktree_path);
+
+    if need_to_switch {
+        // Get the main worktree to switch to
+        let main_worktree = git.get_main_worktree()?;
+        let main_path = main_worktree.path();
+
+        // Print the main worktree path so the shell wrapper can cd to it
+        println!("{}", main_path.display());
+    }
+
+    // Request confirmation
+    let prompt = format!(
+        "Remove worktree at '{}' for branch '{}'?",
+        worktree_path.display(),
+        branch
+    );
+
+    let confirmed = Confirm::new()
+        .with_prompt(prompt)
+        .default(false)
+        .interact()
+        .context("Failed to get confirmation")?;
+
+    if !confirmed {
+        eprintln!("Removal cancelled.");
+        return Ok(());
+    }
+
+    // Remove the worktree
+    let worktree_path_str = worktree_path
+        .to_str()
+        .ok_or_else(|| anyhow!("Invalid worktree path"))?;
+
+    git.remove_worktree(worktree_path_str)
+        .context("Failed to remove worktree")?;
+
+    eprintln!("Worktree for branch '{}' removed.", branch);
+
+    // Delete the branch if requested
+    if delete_branch || force_delete_branch {
+        git.delete_branch(branch, force_delete_branch)
+            .context("Failed to delete branch")?;
+        eprintln!("Branch '{}' deleted.", branch);
+    }
+
+    Ok(())
 }
 
 fn compute_target_path(git: &Git, config: &Config, branch: &str) -> Result<PathBuf> {
