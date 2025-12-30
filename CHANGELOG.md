@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 - Added `-b` / `--create-branch` flag to `gwt sw` command to create a new branch if it doesn't exist. 🌿
+- Improved playground environment by automatically creating a sample git repository (`test_repo`) on startup. 🏗️
 - `gwtree sw <branch>` now notifies the user via stderr when a new worktree is created. 📢
 
 ### Fixed
