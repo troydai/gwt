@@ -20,7 +20,10 @@ pub enum ConfigCommandError {
     ReadError(#[from] std::io::Error),
 }
 
-pub fn handle_config_command(cmd: &ConfigCommands) -> Result<(), ConfigCommandError> {
+pub fn handle_config_command(
+    _config: &config::Config,
+    cmd: &ConfigCommands,
+) -> Result<(), ConfigCommandError> {
     let ConfigCommands::View = cmd;
 
     let config_path = config::config_file_path()?;

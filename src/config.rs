@@ -94,7 +94,7 @@ impl Config {
     /// Save config to the default config file path
     /// Creates the config directory if it doesn't exist
     pub fn save(&self) -> Result<(), ConfigError> {
-        Self::save_to(self, &config_file_path()?)
+        self.save_to(&config_file_path()?)
     }
 
     /// Interactively prompt user to create initial configuration

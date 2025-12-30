@@ -34,35 +34,35 @@ enum Commands {
 fn main() {
     let cli = Cli::parse();
 
-    // Initialize config for all commands except Init (will prompt if missing)
-    // Note: clap handles --help and help subcommand before we reach here
-    if !matches!(&cli.command, Commands::Init { .. }) {
-        if let Err(e) = config::Config::init() {
-            let msg = match e {
-                config::ConfigError::SetupCancelled => "Setup cancelled. Run gwt again to configure.",
-                _ => return eprintln!("Configuration error: {}", e),
-            };
-            eprintln!("{}", msg);
-            exit(1);
+    if let Err(e) = run(cli) {
+        if let Some(config::ConfigError::SetupCancelled) = e.downcast_ref::<config::ConfigError>() {
+            eprintln!("Setup cancelled. Run gwt again to configure.");
+        } else {
+            eprintln!("{}", e);
         }
-    }
-
-    let result = match &cli.command {
-        Commands::Config(config_cmd) => command::config::handle_config_command(config_cmd),
-        Commands::Switch { branch } => {
-            command::worktree::handle_switch_command(&command::worktree::Switch {
-                branch: branch.clone(),
-            })
-        }
-        Commands::Init { shell } => {
-            command::shell::handle_init_command(&command::shell::Init {
-                shell: shell.clone(),
-            })
-        }
-    };
-
-    if let Err(e) = result {
-        eprintln!("{}", e);
         exit(1);
     }
+}
+
+fn run(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
+    if let Commands::Init { shell } = cli.command {
+        return command::shell::handle_init_command(&command::shell::Init { shell })
+            .map_err(|e| e.into());
+    }
+
+    let config = config::Config::init()?;
+
+    match cli.command {
+        Commands::Config(config_cmd) => {
+            command::config::handle_config_command(&config, &config_cmd)?;
+        }
+        Commands::Switch { branch } => {
+            command::worktree::handle_switch_command(
+                &config,
+                &command::worktree::Switch { branch },
+            )?;
+        }
+        Commands::Init { .. } => unreachable!(),
+    }
+    Ok(())
 }
