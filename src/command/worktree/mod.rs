@@ -47,6 +47,12 @@ fn create_worktree_and_print_path(git: &Git, config: &Config, branch: &str) -> R
     git.add_worktree(target_path_str, branch)
         .context("Failed to add worktree")?;
 
+    eprintln!(
+        "Created worktree for branch '{}' at '{}'",
+        branch,
+        target_path.display()
+    );
+
     Ok(target_path)
 }
 
