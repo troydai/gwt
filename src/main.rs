@@ -34,6 +34,20 @@ enum Commands {
 fn main() {
     let cli = Cli::parse();
 
+    // Initialize config for all commands (will prompt if missing)
+    // Note: clap handles --help and help subcommand before we reach here
+    if let Err(e) = config::Config::init() {
+        match e {
+            config::ConfigError::SetupCancelled => {
+                eprintln!("Setup cancelled. Run gwt again to configure.");
+            }
+            _ => {
+                eprintln!("Configuration error: {}", e);
+            }
+        }
+        exit(1);
+    }
+
     match &cli.command {
         Commands::Config(config_cmd) => {
             if let Err(e) = command::config::handle_config_command(config_cmd) {

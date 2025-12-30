@@ -18,8 +18,6 @@ pub enum ConfigCommandError {
     ConfigNotFound(std::path::PathBuf),
     #[error("Error reading config file: {0}")]
     ReadError(#[from] std::io::Error),
-    #[error("Setup cancelled by user")]
-    SetupCancelled,
 }
 
 pub fn handle_config_command(cmd: &ConfigCommands) -> Result<(), ConfigCommandError> {
@@ -35,12 +33,7 @@ pub fn handle_config_command(cmd: &ConfigCommands) -> Result<(), ConfigCommandEr
         path_style.apply_to(config_path.display())
     );
 
-    // Ensure config exists (will prompt if missing)
-    config::Config::init().map_err(|e| match e {
-        config::ConfigError::SetupCancelled => ConfigCommandError::SetupCancelled,
-        e => ConfigCommandError::ConfigPathError(e),
-    })?;
-
+    // Config is already initialized in main.rs, so we can just read it
     let contents = std::fs::read_to_string(&config_path)?;
     let contents_style = Style::new().white().bright();
     println!("\n{}", label_style.apply_to("Config file contents:"));

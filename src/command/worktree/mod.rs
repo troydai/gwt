@@ -8,8 +8,6 @@ pub struct Switch {
 
 #[derive(Debug, thiserror::Error)]
 pub enum SwitchCommandError {
-    #[error("Setup cancelled. Run gwt again to configure.")]
-    SetupCancelled,
     #[error("Configuration error: {0}")]
     ConfigError(#[from] config::ConfigError),
     #[error("Error ensuring worktree root exists: {0}")]
@@ -23,13 +21,8 @@ pub enum SwitchCommandError {
 }
 
 pub fn handle_switch_command(cmd: &Switch) -> Result<(), SwitchCommandError> {
-    let config = match Config::init() {
-        Ok(config) => config,
-        Err(config::ConfigError::SetupCancelled) => {
-            return Err(SwitchCommandError::SetupCancelled);
-        }
-        Err(e) => return Err(SwitchCommandError::ConfigError(e)),
-    };
+    // Config is already initialized in main.rs, so we can just load it
+    let config = Config::load().map_err(SwitchCommandError::ConfigError)?;
 
     config
         .ensure_worktree_root()
