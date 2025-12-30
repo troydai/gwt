@@ -35,13 +35,11 @@ pub fn handle_config_command(cmd: &ConfigCommands) -> Result<(), ConfigCommandEr
         path_style.apply_to(config_path.display())
     );
 
-    if !config_path.exists() {
-        // Prompt user to create the config file
-        config::Config::interactive_setup().map_err(|e| match e {
-            config::ConfigError::SetupCancelled => ConfigCommandError::SetupCancelled,
-            e => ConfigCommandError::ConfigPathError(e),
-        })?;
-    }
+    // Ensure config exists (will prompt if missing)
+    config::Config::init().map_err(|e| match e {
+        config::ConfigError::SetupCancelled => ConfigCommandError::SetupCancelled,
+        e => ConfigCommandError::ConfigPathError(e),
+    })?;
 
     let contents = std::fs::read_to_string(&config_path)?;
     let contents_style = Style::new().white().bright();
