@@ -155,6 +155,25 @@ Branch feature/my-feature @ Worktree /home/user/.gwt_store/a1b2c3d4e5f6g7h8
 #### `gwt config view`
 Displays the location and current contents of your configuration file. This is useful for verifying where your worktrees are being stored.
 
+---
+
+#### `gwt config setup`
+Interactively sets up or resets your configuration. It will prompt you for the `worktree_root` directory.
+
+---
+
+#### `gwt ls`
+Lists all worktrees in a concise format: `{path} {head} [{branch}]`. For detached worktrees, it only shows the path and the head commit hash.
+
+**Example:**
+```bash
+$ gwt ls
+/home/user/repo 3fdfaf9 [main]
+/home/user/.gwt_store/a1b2c3d4 86ee136 [feature/api]
+```
+
+---
+
 #### `gwtree init <shell>`
 Generates the shell integration code required for the `gwt` wrapper to function. This is typically used once during initial setup in your `.bashrc`, `.zshrc`, or `config.fish`. Supported shells: `bash`, `zsh`, `fish`.
 
