@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.0] - 2025-12-31
+
 ### Added
 
 - Added `gwt rm <branch>` command to remove worktrees by branch name instead of directory paths.
