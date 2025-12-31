@@ -18,6 +18,11 @@ fn main() -> Result<()> {
             create,
             main,
         } => command::worktree::switch(&config, branch.as_deref(), create, main),
+        Commands::Rm {
+            branch,
+            delete_branch,
+            force_delete_branch,
+        } => command::worktree::remove(&config, &branch, delete_branch, force_delete_branch),
         Commands::Init { shell } => command::shell::handle(&shell),
         Commands::Current => command::current::handle(),
     }

@@ -62,6 +62,32 @@ impl Git {
         let stdout = String::from_utf8_lossy(&output.stdout);
         Ok(PathBuf::from(stdout.trim()))
     }
+
+    pub fn remove_worktree(&self, path: &str) -> Result<()> {
+        self.run(&["worktree", "remove", path])?;
+        Ok(())
+    }
+
+    pub fn delete_branch(&self, branch: &str, force: bool) -> Result<()> {
+        let flag = if force { "-D" } else { "-d" };
+        self.run(&["branch", flag, branch])?;
+        Ok(())
+    }
+
+    pub fn get_main_worktree(&self) -> Result<Worktree> {
+        let worktrees = self.list_worktrees()?;
+        worktrees
+            .into_iter()
+            .next()
+            .ok_or_else(|| anyhow!("No worktrees found"))
+    }
+
+    pub fn find_worktree_by_branch(&self, branch: &str) -> Result<Option<Worktree>> {
+        let worktrees = self.list_worktrees()?;
+        Ok(worktrees
+            .into_iter()
+            .find(|wt| wt.branch().is_some_and(|b| b == branch)))
+    }
 }
 
 pub(crate) fn parse_porcelain(input: &str) -> Vec<Worktree> {
@@ -322,6 +348,147 @@ fi
 
         let git = Git::new();
         assert!(git.create_branch("new-branch").is_ok());
+
+        unsafe {
+            std::env::remove_var("GWT_GIT");
+        }
+    }
+
+    #[test]
+    fn test_remove_worktree() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        let script = r#"#!/bin/sh
+if [ "$1" = "worktree" ] && [ "$2" = "remove" ] && [ "$3" = "/path/to/worktree" ]; then
+    exit 0
+else
+    echo "unexpected args: $@" >&2
+    exit 1
+fi
+"#;
+        let (mock_git, _dir) = create_mock_git_script(script);
+        unsafe {
+            std::env::set_var("GWT_GIT", &mock_git);
+        }
+
+        let git = Git::new();
+        assert!(git.remove_worktree("/path/to/worktree").is_ok());
+
+        unsafe {
+            std::env::remove_var("GWT_GIT");
+        }
+    }
+
+    #[test]
+    fn test_delete_branch() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        let script = r#"#!/bin/sh
+if [ "$1" = "branch" ] && [ "$2" = "-d" ] && [ "$3" = "my-branch" ]; then
+    exit 0
+else
+    echo "unexpected args: $@" >&2
+    exit 1
+fi
+"#;
+        let (mock_git, _dir) = create_mock_git_script(script);
+        unsafe {
+            std::env::set_var("GWT_GIT", &mock_git);
+        }
+
+        let git = Git::new();
+        assert!(git.delete_branch("my-branch", false).is_ok());
+
+        unsafe {
+            std::env::remove_var("GWT_GIT");
+        }
+    }
+
+    #[test]
+    fn test_delete_branch_force() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        let script = r#"#!/bin/sh
+if [ "$1" = "branch" ] && [ "$2" = "-D" ] && [ "$3" = "my-branch" ]; then
+    exit 0
+else
+    echo "unexpected args: $@" >&2
+    exit 1
+fi
+"#;
+        let (mock_git, _dir) = create_mock_git_script(script);
+        unsafe {
+            std::env::set_var("GWT_GIT", &mock_git);
+        }
+
+        let git = Git::new();
+        assert!(git.delete_branch("my-branch", true).is_ok());
+
+        unsafe {
+            std::env::remove_var("GWT_GIT");
+        }
+    }
+
+    #[test]
+    fn test_get_main_worktree() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        let script = r#"#!/bin/sh
+if [ "$1" = "worktree" ] && [ "$2" = "list" ] && [ "$3" = "--porcelain" ]; then
+    echo "worktree /path/to/main
+HEAD abc123
+branch refs/heads/main
+
+worktree /path/to/feature
+HEAD def456
+branch refs/heads/feature"
+    exit 0
+else
+    echo "unexpected args: $@" >&2
+    exit 1
+fi
+"#;
+        let (mock_git, _dir) = create_mock_git_script(script);
+        unsafe {
+            std::env::set_var("GWT_GIT", &mock_git);
+        }
+
+        let git = Git::new();
+        let main_wt = git.get_main_worktree().unwrap();
+        assert_eq!(main_wt.path(), &PathBuf::from("/path/to/main"));
+        assert_eq!(main_wt.branch(), Some("main"));
+
+        unsafe {
+            std::env::remove_var("GWT_GIT");
+        }
+    }
+
+    #[test]
+    fn test_find_worktree_by_branch() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        let script = r#"#!/bin/sh
+if [ "$1" = "worktree" ] && [ "$2" = "list" ] && [ "$3" = "--porcelain" ]; then
+    echo "worktree /path/to/main
+HEAD abc123
+branch refs/heads/main
+
+worktree /path/to/feature
+HEAD def456
+branch refs/heads/feature-branch"
+    exit 0
+else
+    echo "unexpected args: $@" >&2
+    exit 1
+fi
+"#;
+        let (mock_git, _dir) = create_mock_git_script(script);
+        unsafe {
+            std::env::set_var("GWT_GIT", &mock_git);
+        }
+
+        let git = Git::new();
+        let wt = git.find_worktree_by_branch("feature-branch").unwrap();
+        assert!(wt.is_some());
+        assert_eq!(wt.unwrap().path(), &PathBuf::from("/path/to/feature"));
+
+        let wt2 = git.find_worktree_by_branch("non-existent").unwrap();
+        assert!(wt2.is_none());
 
         unsafe {
             std::env::remove_var("GWT_GIT");

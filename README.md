@@ -105,6 +105,34 @@ $ gwt sw -m
 
 ---
 
+#### `gwt rm <branch> [-b|--delete-branch] [-B|--force-delete-branch]` (Remove)
+
+The `rm` (remove) command simplifies worktree removal by allowing you to specify branches instead of directory paths.
+
+- **Branch-Centric Workflow**: Specify the branch name to identify and remove its associated worktree, eliminating the need to remember or look up worktree directory paths.
+- **Automatic Directory Switching**: If you're currently working inside the worktree being removed, GWT automatically switches you to the main worktree before deletion, preventing errors from deleting your current directory.
+- **Interactive Confirmation**: Prompts for confirmation before removing the worktree to prevent accidental deletions.
+- **Optional Branch Deletion**: Use `-b` or `--delete-branch` to delete the branch after removing the worktree. Use `-B` or `--force-delete-branch` for force deletion (equivalent to `git branch -D`).
+
+**Example:**
+```bash
+# Remove a worktree for a feature branch
+$ gwt rm feature-api-v2
+Remove worktree at '/Users/me/.gwt_store/a1b2c3d4e5f6g7h8' for branch 'feature-api-v2'? [y/N] y
+Worktree for branch 'feature-api-v2' removed.
+
+# Remove a worktree and delete the branch
+$ gwt rm feature-api-v2 -b
+Remove worktree at '/Users/me/.gwt_store/a1b2c3d4e5f6g7h8' for branch 'feature-api-v2'? [y/N] y
+Worktree for branch 'feature-api-v2' removed.
+Branch 'feature-api-v2' deleted.
+
+# Force delete a branch with unmerged changes
+$ gwt rm feature-api-v2 -B
+```
+
+---
+
 #### `gwt current` (alias: `gwt c`)
 
 Displays information about the current Git worktree and branch. This is useful for quickly checking which branch you're on and which worktree directory you're working in.
