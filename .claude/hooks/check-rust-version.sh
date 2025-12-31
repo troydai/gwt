@@ -23,25 +23,6 @@ install_rustup() {
     echo "rustup installed successfully."
 }
 
-# Function to get required Rust version from rust-toolchain.toml
-get_required_version() {
-    if [[ -f "$TOOLCHAIN_FILE" ]]; then
-        # Parse the channel from rust-toolchain.toml
-        grep -E '^channel\s*=' "$TOOLCHAIN_FILE" | sed 's/^channel[[:space:]]*=[[:space:]]*"\{0,1\}\([^"]*\)"\{0,1\}/\1/' | tr -d ' '
-    else
-        echo ""
-    fi
-}
-
-# Function to get current Rust version
-get_current_version() {
-    if command -v rustc &> /dev/null; then
-        rustc --version | awk '{print $2}'
-    else
-        echo ""
-    fi
-}
-
 # Main logic
 main() {
     # Check if rustup is installed
@@ -49,29 +30,12 @@ main() {
         install_rustup
     fi
 
-    # Get required version from rust-toolchain.toml
-    REQUIRED_VERSION=$(get_required_version)
-
-    if [[ -z "$REQUIRED_VERSION" ]]; then
-        echo "No rust-toolchain.toml found or no channel specified. Skipping version check."
-        exit 0
-    fi
-
-    # Get current version
-    CURRENT_VERSION=$(get_current_version)
-
-    # Compare versions (strip any leading 'v' if present)
-    REQUIRED_CLEAN=$(echo "$REQUIRED_VERSION" | sed 's/^v//')
-    CURRENT_CLEAN=$(echo "$CURRENT_VERSION" | sed 's/^v//')
-
-    if [[ "$CURRENT_CLEAN" != "$REQUIRED_CLEAN"* ]]; then
-        echo "Rust version mismatch: current=$CURRENT_VERSION, required=$REQUIRED_VERSION"
-        echo "Installing Rust $REQUIRED_VERSION..."
-        rustup install "$REQUIRED_VERSION"
-        rustup default "$REQUIRED_VERSION"
-        echo "Rust $REQUIRED_VERSION installed and set as default."
-    else
-        echo "Rust version OK: $CURRENT_VERSION (required: $REQUIRED_VERSION)"
+    # If rust-toolchain.toml exists, rustup will automatically use it
+    # Just ensure the toolchain is installed
+    if [[ -f "$TOOLCHAIN_FILE" ]]; then
+        echo "Found rust-toolchain.toml, ensuring toolchain is installed..."
+        rustup show active-toolchain || rustup install
+        echo "Rust toolchain ready."
     fi
 }
 
