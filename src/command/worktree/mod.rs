@@ -83,6 +83,21 @@ fn create_worktree_and_print_path(
     }
 
     let target_path = compute_target_path(git, config, branch)?;
+
+    // If the target path already exists but is not a valid worktree, fail with instructions
+    // (we know it's not a valid worktree because we didn't find it in list_worktrees)
+    if target_path.exists() {
+        bail!(
+            "Cannot create worktree: directory '{}' already exists.\n\n\
+            This is likely an orphaned worktree directory from a previous operation.\n\
+            To resolve this, remove the directory manually:\n\n\
+            \trm -rf '{}'\n\n\
+            Then try again.",
+            target_path.display(),
+            target_path.display()
+        );
+    }
+
     if let Some(parent) = target_path.parent() {
         fs::create_dir_all(parent)
             .with_context(|| format!("Failed to create directory '{}'", parent.display()))?;
