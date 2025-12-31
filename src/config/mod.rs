@@ -30,6 +30,10 @@ pub fn load(cmd: &command::Commands) -> Result<Config> {
 
 pub fn setup() -> Result<()> {
     let home = home_dir()?;
+
+    eprintln!("\n{}", Style::new().cyan().bright().apply_to("Initializing gwt configuration..."));
+    eprintln!("This will create a configuration file to store your worktree settings.\n");
+
     let d = prompt_for_config_data(&home)?;
 
     let config_path = config_file_path(&home);
@@ -70,6 +74,9 @@ fn load_with_home(cmd: &command::Commands, home: &Path) -> Result<Config> {
         bail!("configuration file must be created first.");
     }
 
+    eprintln!("\n{}", Style::new().cyan().bright().apply_to("Setting up gwt configuration..."));
+    eprintln!("This will create a configuration file to store your worktree settings.\n");
+
     let d = prompt_for_config_data(home)?;
 
     d.save(&config_path)?;
@@ -82,6 +89,8 @@ fn load_with_home(cmd: &command::Commands, home: &Path) -> Result<Config> {
 }
 
 fn prompt_for_config_data(home: &Path) -> Result<ConfigData> {
+    eprintln!("Please provide the following configuration:");
+
     let worktree_root: String = Input::with_theme(&prompt_theme())
         .with_prompt("Worktree root directory")
         .default(default_store_path(home).to_string_lossy().to_string())
