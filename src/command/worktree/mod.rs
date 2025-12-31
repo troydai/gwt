@@ -6,7 +6,7 @@ use std::env;
 use std::fs;
 use std::path::PathBuf;
 
-use console::style;
+use console::{Term, style};
 use dialoguer::Confirm;
 
 pub fn list(config: &Config) -> Result<()> {
@@ -142,7 +142,7 @@ pub fn remove(
     let confirmed = Confirm::new()
         .with_prompt(prompt)
         .default(false)
-        .interact()
+        .interact_on(&Term::stderr())
         .context("Failed to get confirmation")?;
 
     if !confirmed {
