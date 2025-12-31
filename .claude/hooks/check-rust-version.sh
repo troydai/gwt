@@ -1,13 +1,13 @@
 #!/bin/bash
 
-# Claude Code hook: Ensure correct Rust version is installed (cloud environments only)
+# Claude Code hook: Ensure correct Rust version is installed (remote environments only)
 # This hook checks the rust-toolchain.toml and installs the required Rust version
-# Skips execution on macOS (local dev environment)
+# Only runs when CLAUDE_CODE_REMOTE=true
 
 set -e
 
-# Skip on macOS - this hook is only for cloud environments
-if [[ "$(uname -s)" == "Darwin" ]]; then
+# Only run in Claude Code remote environment
+if [[ "$CLAUDE_CODE_REMOTE" != "true" ]]; then
     exit 0
 fi
 
