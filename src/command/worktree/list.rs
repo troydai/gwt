@@ -69,7 +69,12 @@ pub fn list(config: &Config, full: bool) -> Result<()> {
         // Apply color styling: yellow for hash, green for branch
         // Column order: marker, hash, branch, path
         let styled_hash = style(short_hash).yellow();
-        let styled_branch = style(format!("{:<width$}", display_branch, width = max_branch_width)).green();
+        let styled_branch = style(format!(
+            "{:<width$}",
+            display_branch,
+            width = max_branch_width
+        ))
+        .green();
 
         // Format the marker and path
         let marker = if is_active { "*" } else { " " };
@@ -95,7 +100,7 @@ pub fn list(config: &Config, full: bool) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::command::worktree::tests::{create_mock_git_script, ENV_LOCK};
+    use crate::command::worktree::tests::{ENV_LOCK, create_mock_git_script};
     use crate::config::{Config, ConfigData};
     use std::path::PathBuf;
 
@@ -333,7 +338,10 @@ esac
         // The list function should gracefully handle dangling directory scenario
         // It will list all valid worktrees, with none marked as active
         let result = list(&config, false);
-        assert!(result.is_ok(), "list should succeed even in dangling worktree directory");
+        assert!(
+            result.is_ok(),
+            "list should succeed even in dangling worktree directory"
+        );
 
         unsafe {
             std::env::remove_var("GWT_GIT");
@@ -386,7 +394,10 @@ esac
         // When current_worktree doesn't match any valid worktree path,
         // no worktree should be marked as active
         let result = list(&config, false);
-        assert!(result.is_ok(), "list should succeed when current path doesn't match any worktree");
+        assert!(
+            result.is_ok(),
+            "list should succeed when current path doesn't match any worktree"
+        );
 
         unsafe {
             std::env::remove_var("GWT_GIT");
@@ -445,7 +456,10 @@ esac
         // The list function should succeed and sort alphabetically
         // Expected order: apple, charlie, main, zebra
         let result = list(&config, false);
-        assert!(result.is_ok(), "list should succeed with alphabetical sorting");
+        assert!(
+            result.is_ok(),
+            "list should succeed with alphabetical sorting"
+        );
 
         unsafe {
             std::env::remove_var("GWT_GIT");
@@ -503,7 +517,10 @@ esac
         // The list function should succeed with active first, then alphabetically
         // Expected order: main (active), apple, charlie, zebra
         let result = list(&config, false);
-        assert!(result.is_ok(), "list should succeed with active first then alphabetical");
+        assert!(
+            result.is_ok(),
+            "list should succeed with active first then alphabetical"
+        );
 
         unsafe {
             std::env::remove_var("GWT_GIT");
@@ -560,7 +577,10 @@ esac
         // then detached worktrees
         // Expected order: apple, zebra, (detached), (detached)
         let result = list(&config, false);
-        assert!(result.is_ok(), "list should succeed with detached worktrees last");
+        assert!(
+            result.is_ok(),
+            "list should succeed with detached worktrees last"
+        );
 
         unsafe {
             std::env::remove_var("GWT_GIT");
@@ -607,7 +627,10 @@ esac
 
         // Test without --full flag (should truncate)
         let result = list(&config, false);
-        assert!(result.is_ok(), "list should succeed with truncated branch names");
+        assert!(
+            result.is_ok(),
+            "list should succeed with truncated branch names"
+        );
 
         unsafe {
             std::env::remove_var("GWT_GIT");
