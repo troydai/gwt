@@ -3,6 +3,8 @@ use crate::utility::Git;
 use anyhow::Result;
 use console::style;
 
+const MAX_BRANCH_WIDTH: usize = 32;
+
 pub fn list(config: &Config, full: bool) -> Result<()> {
     config.ensure_worktree_root()?;
 
@@ -12,36 +14,27 @@ pub fn list(config: &Config, full: bool) -> Result<()> {
     // Detect the current worktree path (may fail if not in a git worktree)
     let current_worktree = git.git_toplevel().ok();
 
-    // Sort worktrees: active first, then by branch name alphabetically
-    worktrees.sort_by(|a, b| {
-        let a_is_active = current_worktree.as_ref().is_some_and(|cw| cw == a.path());
-        let b_is_active = current_worktree.as_ref().is_some_and(|cw| cw == b.path());
-
-        // First, sort by active status (active worktree should come first)
-        match b_is_active.cmp(&a_is_active) {
-            std::cmp::Ordering::Equal => {
-                // If both have same active status, sort by branch name
-                // Detached worktrees (None) come after named branches
-                match (a.branch(), b.branch()) {
-                    (Some(a_branch), Some(b_branch)) => a_branch.cmp(b_branch),
-                    (Some(_), None) => std::cmp::Ordering::Less,
-                    (None, Some(_)) => std::cmp::Ordering::Greater,
-                    (None, None) => std::cmp::Ordering::Equal,
-                }
-            }
-            other => other,
-        }
+    // Sort worktrees by branch name alphabetically
+    // Detached worktrees (None) come after named branches
+    worktrees.sort_by(|a, b| match (a.branch(), b.branch()) {
+        (Some(a_branch), Some(b_branch)) => a_branch.cmp(b_branch),
+        (Some(_), None) => std::cmp::Ordering::Less,
+        (None, Some(_)) => std::cmp::Ordering::Greater,
+        (None, None) => std::cmp::Ordering::Equal,
     });
 
     // Calculate the maximum branch name width for column alignment
-    // Cap at 32 characters unless --full is specified
+    // Cap at MAX_BRANCH_WIDTH characters unless --full is specified
     let max_branch_width = worktrees
         .iter()
         .map(|wt| {
             if full {
                 wt.branch().unwrap_or("(detached)").len()
             } else {
-                wt.branch().unwrap_or("(detached)").len().min(32)
+                wt.branch()
+                    .unwrap_or("(detached)")
+                    .len()
+                    .min(MAX_BRANCH_WIDTH)
             }
         })
         .max()
@@ -54,14 +47,14 @@ pub fn list(config: &Config, full: bool) -> Result<()> {
         let head = wt.head();
         let short_hash = &head[..7.min(head.len())];
 
-        // Format branch name or "(detached)" for detached HEAD
+        // Truncate branch name or "(detached)" for detached HEAD
         let branch_name = wt.branch().unwrap_or("(detached)");
 
-        // Truncate branch name at 20 characters unless --full is specified
-        let display_branch = if full || branch_name.len() <= 20 {
+        // Truncate branch name at MAX_BRANCH_WIDTH characters unless --full is specified
+        let display_branch = if full || branch_name.len() <= MAX_BRANCH_WIDTH {
             branch_name.to_string()
         } else {
-            format!("{}…", &branch_name[..19])
+            format!("{}…", &branch_name[..MAX_BRANCH_WIDTH - 1])
         };
 
         // Apply color styling: yellow for hash, green for branch
@@ -193,10 +186,9 @@ esac
     }
 
     #[test]
-    fn test_list_worktrees_active_worktree_first() {
+    fn test_list_worktrees_sorted_alphabetically() {
         let _guard = ENV_LOCK.lock().unwrap();
-        // The active worktree (/path/to/feature) is listed second in git output,
-        // but should appear first in the formatted output
+        // The worktrees should be sorted by branch name alphabetically regardless of which one is active
         let script = r#"#!/bin/sh
 case "$1 $2 $3" in
     "worktree list --porcelain")
@@ -231,7 +223,7 @@ esac
             PathBuf::from("/tmp/config"),
         );
 
-        // The list function should succeed and prioritize active worktree
+        // The list function should succeed and sort by branch name (feature-branch before main)
         let result = list(&config, false);
         assert!(result.is_ok());
 
@@ -465,67 +457,6 @@ esac
     }
 
     #[test]
-    fn test_list_worktrees_active_first_then_alphabetical() {
-        let _guard = ENV_LOCK.lock().unwrap();
-        // Test that active worktree appears first, then others sorted alphabetically
-        let script = r#"#!/bin/sh
-case "$1 $2 $3" in
-    "worktree list --porcelain")
-        # Return worktrees in non-alphabetical order
-        echo "worktree /path/to/zebra
-HEAD 111111111111111
-branch refs/heads/zebra
-
-worktree /path/to/apple
-HEAD 222222222222222
-branch refs/heads/apple
-
-worktree /path/to/main
-HEAD 333333333333333
-branch refs/heads/main
-
-worktree /path/to/charlie
-HEAD 444444444444444
-branch refs/heads/charlie"
-        exit 0
-        ;;
-    "rev-parse --show-toplevel")
-        # Currently in main worktree
-        echo "/path/to/main"
-        exit 0
-        ;;
-    *)
-        echo "unexpected args: $@" >&2
-        exit 1
-        ;;
-esac
-"#;
-        let (mock_git, _dir) = create_mock_git_script(script);
-        unsafe {
-            std::env::set_var("GWT_GIT", &mock_git);
-        }
-
-        let config = Config::Loaded(
-            ConfigData {
-                worktree_root: PathBuf::from("/tmp/wt-root"),
-            },
-            PathBuf::from("/tmp/config"),
-        );
-
-        // The list function should succeed with active first, then alphabetically
-        // Expected order: main (active), apple, charlie, zebra
-        let result = list(&config, false);
-        assert!(
-            result.is_ok(),
-            "list should succeed with active first then alphabetical"
-        );
-
-        unsafe {
-            std::env::remove_var("GWT_GIT");
-        }
-    }
-
-    #[test]
     fn test_list_worktrees_detached_sorted_last() {
         let _guard = ENV_LOCK.lock().unwrap();
         // Test that detached worktrees appear after named branches
@@ -588,7 +519,7 @@ esac
     #[test]
     fn test_list_worktrees_truncate_long_branch_names() {
         let _guard = ENV_LOCK.lock().unwrap();
-        // Test that branch names longer than 20 characters are truncated by default
+        // Test that branch names longer than MAX_BRANCH_WIDTH characters are truncated by default
         let script = r#"#!/bin/sh
 case "$1 $2 $3" in
     "worktree list --porcelain")
@@ -598,7 +529,7 @@ branch refs/heads/short
 
 worktree /path/to/very-long
 HEAD 222222222222222
-branch refs/heads/feature/this-is-a-very-long-branch-name-that-exceeds-twenty-chars"
+branch refs/heads/feature/this-is-a-very-long-branch-name-that-exceeds-thirty-two-chars"
         exit 0
         ;;
     "rev-parse --show-toplevel")
@@ -648,7 +579,7 @@ branch refs/heads/short
 
 worktree /path/to/very-long
 HEAD 222222222222222
-branch refs/heads/feature/this-is-a-very-long-branch-name-that-exceeds-twenty-chars"
+branch refs/heads/feature/this-is-a-very-long-branch-name-that-exceeds-thirty-two-chars"
         exit 0
         ;;
     "rev-parse --show-toplevel")
