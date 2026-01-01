@@ -215,9 +215,7 @@ fn resolve_main_branch(git: &Git) -> Result<String> {
 // Helper functions
 
 #[cfg(test)]
-pub(crate) mod tests {
-    use super::*;
-    use crate::config::ConfigData;
+pub(crate) mod test_utils {
     use std::path::PathBuf;
     use std::sync::Mutex;
     use tempfile::tempdir;
@@ -237,6 +235,14 @@ pub(crate) mod tests {
 
         (mock_git, dir)
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::command::worktree::test_utils::{ENV_LOCK, create_mock_git_script};
+    use crate::config::ConfigData;
+    use std::path::PathBuf;
 
     #[test]
     fn test_compute_worktree_hash() {

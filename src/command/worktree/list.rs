@@ -100,7 +100,7 @@ pub fn list(config: &Config, full: bool) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::command::worktree::tests::{ENV_LOCK, create_mock_git_script};
+    use crate::command::worktree::test_utils::{ENV_LOCK, create_mock_git_script};
     use crate::config::{Config, ConfigData};
     use std::path::PathBuf;
 
