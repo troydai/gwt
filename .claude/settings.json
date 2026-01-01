@@ -2,11 +2,11 @@
   "hooks": {
     "SessionStart": [
       {
-        "matcher": "",
+        "matcher": "startup",
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/hooks/check-rust-version.sh"
+            "command": ".claude/hooks/session-start.sh"
           }
         ]
       }
@@ -14,11 +14,11 @@
   },
   "permissions": {
     "allow": [
-      "Bash(cat:*)",
-      "Bash(git *)",
-      "Bash(gh *)",
-      "Bash(gwt *)",
-      "Bash(gwtree *)"
+      "Bash(cat :*)",
+      "Bash(git :*)",
+      "Bash(gh :*)",
+      "Bash(gwt :*)",
+      "Bash(gwtree :*)"
     ]
   }
 }
