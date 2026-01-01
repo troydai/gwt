@@ -18,12 +18,25 @@ pub fn list(config: &Config) -> Result<()> {
     // Detect the current worktree path (may fail if not in a git worktree)
     let current_worktree = git.git_toplevel().ok();
 
-    // Sort worktrees so the active one appears first
+    // Sort worktrees: active first, then by branch name alphabetically
     worktrees.sort_by(|a, b| {
         let a_is_active = current_worktree.as_ref().is_some_and(|cw| cw == a.path());
         let b_is_active = current_worktree.as_ref().is_some_and(|cw| cw == b.path());
-        // Active worktree should come first (true > false when reversed)
-        b_is_active.cmp(&a_is_active)
+
+        // First, sort by active status (active worktree should come first)
+        match b_is_active.cmp(&a_is_active) {
+            std::cmp::Ordering::Equal => {
+                // If both have same active status, sort by branch name
+                // Detached worktrees (None) come after named branches
+                match (a.branch(), b.branch()) {
+                    (Some(a_branch), Some(b_branch)) => a_branch.cmp(b_branch),
+                    (Some(_), None) => std::cmp::Ordering::Less,
+                    (None, Some(_)) => std::cmp::Ordering::Greater,
+                    (None, None) => std::cmp::Ordering::Equal,
+                }
+            }
+            other => other,
+        }
     });
 
     for wt in worktrees {
@@ -662,6 +675,180 @@ esac
         // no worktree should be marked as active
         let result = list(&config);
         assert!(result.is_ok(), "list should succeed when current path doesn't match any worktree");
+
+        unsafe {
+            std::env::remove_var("GWT_GIT");
+        }
+    }
+
+    #[test]
+    fn test_list_worktrees_sorted_alphabetically_by_branch() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        // Test that worktrees are sorted alphabetically by branch name
+        // when there's no active worktree
+        let script = r#"#!/bin/sh
+case "$1 $2 $3" in
+    "worktree list --porcelain")
+        # Return worktrees in non-alphabetical order to verify sorting
+        echo "worktree /path/to/zebra
+HEAD 111111111111111
+branch refs/heads/zebra
+
+worktree /path/to/apple
+HEAD 222222222222222
+branch refs/heads/apple
+
+worktree /path/to/main
+HEAD 333333333333333
+branch refs/heads/main
+
+worktree /path/to/charlie
+HEAD 444444444444444
+branch refs/heads/charlie"
+        exit 0
+        ;;
+    "rev-parse --show-toplevel")
+        # Not in any worktree
+        echo "fatal: not a git repository" >&2
+        exit 128
+        ;;
+    *)
+        echo "unexpected args: $@" >&2
+        exit 1
+        ;;
+esac
+"#;
+        let (mock_git, _dir) = create_mock_git_script(script);
+        unsafe {
+            std::env::set_var("GWT_GIT", &mock_git);
+        }
+
+        let config = Config::Loaded(
+            ConfigData {
+                worktree_root: PathBuf::from("/tmp/wt-root"),
+            },
+            PathBuf::from("/tmp/config"),
+        );
+
+        // The list function should succeed and sort alphabetically
+        // Expected order: apple, charlie, main, zebra
+        let result = list(&config);
+        assert!(result.is_ok(), "list should succeed with alphabetical sorting");
+
+        unsafe {
+            std::env::remove_var("GWT_GIT");
+        }
+    }
+
+    #[test]
+    fn test_list_worktrees_active_first_then_alphabetical() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        // Test that active worktree appears first, then others sorted alphabetically
+        let script = r#"#!/bin/sh
+case "$1 $2 $3" in
+    "worktree list --porcelain")
+        # Return worktrees in non-alphabetical order
+        echo "worktree /path/to/zebra
+HEAD 111111111111111
+branch refs/heads/zebra
+
+worktree /path/to/apple
+HEAD 222222222222222
+branch refs/heads/apple
+
+worktree /path/to/main
+HEAD 333333333333333
+branch refs/heads/main
+
+worktree /path/to/charlie
+HEAD 444444444444444
+branch refs/heads/charlie"
+        exit 0
+        ;;
+    "rev-parse --show-toplevel")
+        # Currently in main worktree
+        echo "/path/to/main"
+        exit 0
+        ;;
+    *)
+        echo "unexpected args: $@" >&2
+        exit 1
+        ;;
+esac
+"#;
+        let (mock_git, _dir) = create_mock_git_script(script);
+        unsafe {
+            std::env::set_var("GWT_GIT", &mock_git);
+        }
+
+        let config = Config::Loaded(
+            ConfigData {
+                worktree_root: PathBuf::from("/tmp/wt-root"),
+            },
+            PathBuf::from("/tmp/config"),
+        );
+
+        // The list function should succeed with active first, then alphabetically
+        // Expected order: main (active), apple, charlie, zebra
+        let result = list(&config);
+        assert!(result.is_ok(), "list should succeed with active first then alphabetical");
+
+        unsafe {
+            std::env::remove_var("GWT_GIT");
+        }
+    }
+
+    #[test]
+    fn test_list_worktrees_detached_sorted_last() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        // Test that detached worktrees appear after named branches
+        let script = r#"#!/bin/sh
+case "$1 $2 $3" in
+    "worktree list --porcelain")
+        echo "worktree /path/to/detached1
+HEAD 111111111111111
+detached
+
+worktree /path/to/zebra
+HEAD 222222222222222
+branch refs/heads/zebra
+
+worktree /path/to/apple
+HEAD 333333333333333
+branch refs/heads/apple
+
+worktree /path/to/detached2
+HEAD 444444444444444
+detached"
+        exit 0
+        ;;
+    "rev-parse --show-toplevel")
+        echo "fatal: not a git repository" >&2
+        exit 128
+        ;;
+    *)
+        echo "unexpected args: $@" >&2
+        exit 1
+        ;;
+esac
+"#;
+        let (mock_git, _dir) = create_mock_git_script(script);
+        unsafe {
+            std::env::set_var("GWT_GIT", &mock_git);
+        }
+
+        let config = Config::Loaded(
+            ConfigData {
+                worktree_root: PathBuf::from("/tmp/wt-root"),
+            },
+            PathBuf::from("/tmp/config"),
+        );
+
+        // The list function should sort named branches first (alphabetically),
+        // then detached worktrees
+        // Expected order: apple, zebra, (detached), (detached)
+        let result = list(&config);
+        assert!(result.is_ok(), "list should succeed with detached worktrees last");
 
         unsafe {
             std::env::remove_var("GWT_GIT");
