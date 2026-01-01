@@ -73,7 +73,7 @@ This will build a container with GWT pre-installed and drop you into a shell whe
 
 ### Commands
 
-#### `gwt sw <branch> [-b|--create-branch] [-m|--main]` (Switch)
+#### `gwt sw <branch> [-b|--create-branch] [-m|--main] [-r|--remote <remote/branch>]` (Switch)
 
 The `sw` (switch) command is the heart of GWT. It combines worktree discovery, creation, and directory navigation into a single seamless operation.
 
@@ -83,6 +83,10 @@ The `sw` (switch) command is the heart of GWT. It combines worktree discovery, c
     - It uses a deterministic hashing algorithm to ensure the worktree path is stable and unique to that repository/branch combination.
     - Once created, it immediately moves your shell into that new directory.
 - **New Branch Creation**: With the `-b` or `--create-branch` flag, GWT will create the branch for you if it doesn't already exist.
+- **Remote Branch Switching**: Use the `-r` or `--remote` flag to switch to a branch that exists on a remote but hasn't been created locally yet. GWT will:
+    - Parse the local branch name (e.g., `origin/feature-x` -> `feature-x`).
+    - Create the local branch tracking the remote one.
+    - Create a worktree and switch to it.
 - **Main Branch Shortcut**: Use the `-m` or `--main` flag to quickly switch to the primary branch without specifying its name. GWT will automatically detect and use `main` if it exists, falling back to `master` if only the latter is present.
 - **Safe Transitions**: GWT checks if you are already on the target branch or if the branch exists before making any changes, preventing accidental state issues. Informational messages are printed to `stderr` to keep `stdout` clean for path-based navigation.
 
@@ -93,6 +97,11 @@ $ gwt sw -b feature-api-v2
 Branch 'feature-api-v2' created.
 Created directory: /Users/me/.gwt_store
 Created worktree for branch 'feature-api-v2' at '/Users/me/.gwt_store/a1b2c3d4e5f6g7h8'
+
+# Switch to a branch from remote
+$ gwt sw -r origin/fix-bug-123
+Created local branch 'fix-bug-123' tracking remote 'origin/fix-bug-123'.
+Created worktree for branch 'fix-bug-123' at '/Users/me/.gwt_store/b2c3d4e5f6g7h8a1'
 
 # You are now automatically navigated to the worktree directory
 $ pwd
