@@ -185,35 +185,50 @@ pub fn remove(
 }
 
 fn handle_remote_branch(git: &Git, remote_branch: &str) -> Result<String> {
-    // remote_branch is like "origin/feature"
-    // local branch should be "feature"
-    let parts: Vec<&str> = remote_branch.splitn(2, '/').collect();
-    if parts.len() < 2 {
-        bail!(
-            "Invalid remote branch format. Expected 'remote/branch', got '{}'",
-            remote_branch
-        );
-    }
-    let local_branch = parts[1].to_string();
+    let (local_branch, full_remote_path) = if remote_branch.contains('/') {
+        let parts: Vec<&str> = remote_branch.splitn(2, '/').collect();
+        if parts.len() < 2 {
+            bail!(
+                "Invalid remote branch format. Expected 'remote/branch', got '{}'",
+                remote_branch
+            );
+        }
+        (parts[1].to_string(), remote_branch.to_string())
+    } else {
+        // Smart lookup like 'git checkout'
+        let matches = git.find_remote_branches_by_name(remote_branch)?;
+        if matches.is_empty() {
+            bail!("No remote branch found matching '{}'", remote_branch);
+        } else if matches.len() > 1 {
+            bail!(
+                "Ambiguous branch name '{}'. Found in multiple remotes: {}. Please specify the remote (e.g., {}/{})",
+                remote_branch,
+                matches.join(", "),
+                matches[0].split('/').next().unwrap_or("origin"),
+                remote_branch
+            );
+        }
+        (remote_branch.to_string(), matches[0].clone())
+    };
 
     if git.branch_exists(&local_branch)? {
         eprintln!("Local branch '{}' already exists. Using it.", local_branch);
         return Ok(local_branch);
     }
 
-    if !git.remote_branch_exists(remote_branch)? {
-        bail!("Remote branch '{}' does not exist.", remote_branch);
+    if !git.remote_branch_exists(&full_remote_path)? {
+        bail!("Remote branch '{}' does not exist.", full_remote_path);
     }
 
-    git.create_branch_from_remote(&local_branch, remote_branch)
+    git.create_branch_from_remote(&local_branch, &full_remote_path)
         .context(format!(
             "Failed to create local branch '{}' from remote '{}'",
-            local_branch, remote_branch
+            local_branch, full_remote_path
         ))?;
 
     eprintln!(
         "Created local branch '{}' tracking remote '{}'.",
-        local_branch, remote_branch
+        local_branch, full_remote_path
     );
 
     Ok(local_branch)
@@ -548,6 +563,46 @@ esac
         let result = handle_remote_branch(&git, "origin/feature");
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "feature");
+
+        unsafe {
+            std::env::remove_var("GWT_GIT");
+        }
+    }
+
+    #[test]
+    fn test_handle_remote_branch_smart_lookup() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        let script = r#"#!/bin/sh
+case "$@" in
+    "for-each-ref --format=%(refname) refs/remotes/*/smart-feature")
+        echo "refs/remotes/origin/smart-feature"
+        exit 0
+        ;;
+    "for-each-ref --format=%(refname) refs/heads/smart-feature")
+        exit 0
+        ;;
+    "for-each-ref --format=%(refname) refs/remotes/origin/smart-feature")
+        echo "refs/remotes/origin/smart-feature"
+        exit 0
+        ;;
+    "branch --track smart-feature origin/smart-feature")
+        exit 0
+        ;;
+    *)
+        echo "unexpected args: $@" >&2
+        exit 1
+        ;;
+esac
+"#;
+        let (mock_git, _dir) = create_mock_git_script(script);
+        unsafe {
+            std::env::set_var("GWT_GIT", &mock_git);
+        }
+
+        let git = Git::new();
+        let result = handle_remote_branch(&git, "smart-feature");
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "smart-feature");
 
         unsafe {
             std::env::remove_var("GWT_GIT");

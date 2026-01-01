@@ -59,6 +59,21 @@ impl Git {
         Ok(stdout.lines().any(|line| line.trim() == ref_name))
     }
 
+    pub fn find_remote_branches_by_name(&self, name: &str) -> Result<Vec<String>> {
+        let pattern = format!("refs/remotes/*/{}", name);
+        let output = self.run(&["for-each-ref", "--format=%(refname)", &pattern])?;
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        Ok(stdout
+            .lines()
+            .map(|line| {
+                line.trim()
+                    .strip_prefix("refs/remotes/")
+                    .unwrap_or(line)
+                    .to_string()
+            })
+            .collect())
+    }
+
     pub fn create_branch(&self, branch: &str) -> Result<()> {
         self.run(&["branch", branch])?;
         Ok(())
@@ -506,6 +521,35 @@ fi
 
         let wt2 = git.find_worktree_by_branch("non-existent").unwrap();
         assert!(wt2.is_none());
+
+        unsafe {
+            std::env::remove_var("GWT_GIT");
+        }
+    }
+
+    #[test]
+    fn test_find_remote_branches_by_name() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        let script = r#"#!/bin/sh
+if [ "$1" = "for-each-ref" ] && [ "$2" = "--format=%(refname)" ] && [ "$3" = "refs/remotes/*/my-branch" ]; then
+    echo "refs/remotes/origin/my-branch"
+    echo "refs/remotes/upstream/my-branch"
+    exit 0
+else
+    echo "unexpected args: $@" >&2
+    exit 1
+fi
+"#;
+        let (mock_git, _dir) = create_mock_git_script(script);
+        unsafe {
+            std::env::set_var("GWT_GIT", &mock_git);
+        }
+
+        let git = Git::new();
+        let matches = git.find_remote_branches_by_name("my-branch").unwrap();
+        assert_eq!(matches.len(), 2);
+        assert!(matches.contains(&"origin/my-branch".to_string()));
+        assert!(matches.contains(&"upstream/my-branch".to_string()));
 
         unsafe {
             std::env::remove_var("GWT_GIT");
