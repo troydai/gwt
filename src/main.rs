@@ -12,7 +12,7 @@ fn main() -> Result<()> {
 
     match cli.command {
         Commands::Config(config_command) => command::config::handle(&config, &config_command),
-        Commands::Ls => command::worktree::list(&config),
+        Commands::Ls { full } => command::worktree::list(&config, full),
         Commands::Sw {
             branch,
             create,

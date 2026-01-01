@@ -88,11 +88,8 @@ mod tests {
     fn test_config_commands_view_variant() {
         // Test that ConfigCommands::View can be created and matched
         let cmd = ConfigCommands::View;
-        match cmd {
-            ConfigCommands::View => {
-                // This ensures the variant exists and can be matched
-            }
-            _ => {}
+        if let ConfigCommands::View = cmd {
+            // This ensures the variant exists and can be matched
         }
     }
 

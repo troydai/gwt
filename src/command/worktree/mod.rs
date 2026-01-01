@@ -1,3 +1,7 @@
+mod list;
+
+pub use list::list;
+
 use crate::config::Config;
 use crate::utility::Git;
 use anyhow::{Context, Result, anyhow, bail};
@@ -8,24 +12,6 @@ use std::path::PathBuf;
 
 use console::{Term, style};
 use dialoguer::Confirm;
-
-pub fn list(config: &Config) -> Result<()> {
-    config.ensure_worktree_root()?;
-
-    let git = Git::new();
-    let worktrees = git.list_worktrees()?;
-
-    for wt in worktrees {
-        let path = wt.path().display();
-        let head = wt.head();
-        match wt.branch() {
-            Some(branch) => println!("{} {} [{}]", path, head, branch),
-            None => println!("{} {}", path, head),
-        }
-    }
-
-    Ok(())
-}
 
 pub fn switch(config: &Config, branch: Option<&str>, create: bool, use_main: bool) -> Result<()> {
     config.ensure_worktree_root()?;
@@ -229,16 +215,14 @@ fn resolve_main_branch(git: &Git) -> Result<String> {
 // Helper functions
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::config::ConfigData;
+pub(crate) mod test_utils {
     use std::path::PathBuf;
     use std::sync::Mutex;
     use tempfile::tempdir;
 
-    static ENV_LOCK: Mutex<()> = Mutex::new(());
+    pub(crate) static ENV_LOCK: Mutex<()> = Mutex::new(());
 
-    fn create_mock_git_script(script_content: &str) -> (PathBuf, tempfile::TempDir) {
+    pub(crate) fn create_mock_git_script(script_content: &str) -> (PathBuf, tempfile::TempDir) {
         let dir = tempdir().unwrap();
         let mock_git = dir.path().join("mock-git");
         std::fs::write(&mock_git, script_content).unwrap();
@@ -251,6 +235,14 @@ mod tests {
 
         (mock_git, dir)
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::command::worktree::test_utils::{ENV_LOCK, create_mock_git_script};
+    use crate::config::ConfigData;
+    use std::path::PathBuf;
 
     #[test]
     fn test_compute_worktree_hash() {
@@ -272,13 +264,16 @@ fi
 exit 1
 "#;
         let (mock_git, _dir) = create_mock_git_script(script);
+        let wt_root = _dir.path().join("wt-root");
+        std::fs::create_dir_all(&wt_root).unwrap();
+
         unsafe {
             std::env::set_var("GWT_GIT", &mock_git);
         }
 
         let config = Config::Loaded(
             ConfigData {
-                worktree_root: PathBuf::from("/tmp/wt-root"),
+                worktree_root: wt_root.clone(),
             },
             PathBuf::from("/tmp/config"),
         );
@@ -287,7 +282,7 @@ exit 1
         let path = compute_target_path(&git, &config, "feature-branch").unwrap();
 
         let hash = compute_worktree_hash("/path/to/my-repo", "feature-branch");
-        let expected_path = PathBuf::from("/tmp/wt-root").join(hash);
+        let expected_path = wt_root.join(hash);
         assert_eq!(path, expected_path);
 
         unsafe {
@@ -320,95 +315,22 @@ case "$@" in
 esac
 "#;
         let (mock_git, _dir) = create_mock_git_script(script);
+        let wt_root = _dir.path().join("wt-root");
+        std::fs::create_dir_all(&wt_root).unwrap();
+
         unsafe {
             std::env::set_var("GWT_GIT", &mock_git);
         }
 
         let config = Config::Loaded(
             ConfigData {
-                worktree_root: PathBuf::from("/tmp/wt-root"),
+                worktree_root: wt_root,
             },
             PathBuf::from("/tmp/config"),
         );
 
         let git = Git::new();
         let result = create_worktree_and_print_path(&git, &config, "new-branch", true);
-        assert!(result.is_ok());
-
-        unsafe {
-            std::env::remove_var("GWT_GIT");
-        }
-    }
-
-    #[test]
-    fn test_list_worktrees() {
-        let _guard = ENV_LOCK.lock().unwrap();
-        let script = r#"#!/bin/sh
-if [ "$1" = "worktree" ] && [ "$2" = "list" ] && [ "$3" = "--porcelain" ]; then
-    echo "worktree /path/to/main
-HEAD abc123
-branch refs/heads/main
-
-worktree /path/to/feature
-HEAD def456
-branch refs/heads/feature-branch"
-    exit 0
-else
-    echo "unexpected args: $@" >&2
-    exit 1
-fi
-"#;
-        let (mock_git, _dir) = create_mock_git_script(script);
-        unsafe {
-            std::env::set_var("GWT_GIT", &mock_git);
-        }
-
-        let config = Config::Loaded(
-            ConfigData {
-                worktree_root: PathBuf::from("/tmp/wt-root"),
-            },
-            PathBuf::from("/tmp/config"),
-        );
-
-        let result = list(&config);
-        assert!(result.is_ok());
-
-        unsafe {
-            std::env::remove_var("GWT_GIT");
-        }
-    }
-
-    #[test]
-    fn test_list_worktrees_with_detached() {
-        let _guard = ENV_LOCK.lock().unwrap();
-        let script = r#"#!/bin/sh
-if [ "$1" = "worktree" ] && [ "$2" = "list" ] && [ "$3" = "--porcelain" ]; then
-    echo "worktree /path/to/main
-HEAD abc123
-branch refs/heads/main
-
-worktree /path/to/detached
-HEAD ghi789
-detached"
-    exit 0
-else
-    echo "unexpected args: $@" >&2
-    exit 1
-fi
-"#;
-        let (mock_git, _dir) = create_mock_git_script(script);
-        unsafe {
-            std::env::set_var("GWT_GIT", &mock_git);
-        }
-
-        let config = Config::Loaded(
-            ConfigData {
-                worktree_root: PathBuf::from("/tmp/wt-root"),
-            },
-            PathBuf::from("/tmp/config"),
-        );
-
-        let result = list(&config);
         assert!(result.is_ok());
 
         unsafe {
