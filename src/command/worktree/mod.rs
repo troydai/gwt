@@ -39,6 +39,13 @@ pub fn list(config: &Config) -> Result<()> {
         }
     });
 
+    // Calculate the maximum branch name width for column alignment
+    let max_branch_width = worktrees
+        .iter()
+        .map(|wt| wt.branch().unwrap_or("(detached)").len())
+        .max()
+        .unwrap_or(0);
+
     for wt in worktrees {
         let is_active = current_worktree.as_ref().is_some_and(|cw| cw == wt.path());
 
@@ -50,7 +57,7 @@ pub fn list(config: &Config) -> Result<()> {
         let branch_name = wt.branch().unwrap_or("(detached)");
 
         // Apply color styling: green for branch, yellow for hash
-        let styled_branch = style(branch_name).green();
+        let styled_branch = style(format!("{:<width$}", branch_name, width = max_branch_width)).green();
         let styled_hash = style(short_hash).yellow();
 
         // Format the marker and path
