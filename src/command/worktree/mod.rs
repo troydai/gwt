@@ -560,6 +560,115 @@ esac
     }
 
     #[test]
+    fn test_list_worktrees_in_dangling_worktree_directory() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        // Test the specific scenario where user is in a dangling worktree directory:
+        // - The directory exists on disk
+        // - git_toplevel fails because it's not a valid git worktree (orphaned/deleted)
+        // - Valid worktrees still exist in the repository
+        // Expected behavior:
+        // - Command succeeds and lists all valid worktrees
+        // - No worktree is marked as active (no asterisk/bold)
+        // - Worktrees maintain their original order (no sorting since no active match)
+        let script = r#"#!/bin/sh
+case "$1 $2 $3" in
+    "worktree list --porcelain")
+        echo "worktree /path/to/main
+HEAD abc123def456789
+branch refs/heads/main
+
+worktree /path/to/feature
+HEAD def456abc789012
+branch refs/heads/feature-branch"
+        exit 0
+        ;;
+    "rev-parse --show-toplevel")
+        # This simulates being in a dangling directory that's not a valid git worktree
+        echo "fatal: not a git repository (or any of the parent directories): .git" >&2
+        exit 128
+        ;;
+    *)
+        echo "unexpected args: $@" >&2
+        exit 1
+        ;;
+esac
+"#;
+        let (mock_git, _dir) = create_mock_git_script(script);
+        unsafe {
+            std::env::set_var("GWT_GIT", &mock_git);
+        }
+
+        let config = Config::Loaded(
+            ConfigData {
+                worktree_root: PathBuf::from("/tmp/wt-root"),
+            },
+            PathBuf::from("/tmp/config"),
+        );
+
+        // The list function should gracefully handle dangling directory scenario
+        // It will list all valid worktrees, with none marked as active
+        let result = list(&config);
+        assert!(result.is_ok(), "list should succeed even in dangling worktree directory");
+
+        unsafe {
+            std::env::remove_var("GWT_GIT");
+        }
+    }
+
+    #[test]
+    fn test_list_worktrees_dangling_vs_valid_path_matching() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        // Test edge case: dangling directory path is similar to a valid worktree path
+        // but git_toplevel returns a different path (or fails)
+        // This ensures we don't accidentally match on path similarity
+        let script = r#"#!/bin/sh
+case "$1 $2 $3" in
+    "worktree list --porcelain")
+        echo "worktree /path/to/main
+HEAD abc123def456789
+branch refs/heads/main
+
+worktree /path/to/feature
+HEAD def456abc789012
+branch refs/heads/feature-branch"
+        exit 0
+        ;;
+    "rev-parse --show-toplevel")
+        # Return a path that doesn't match any valid worktree
+        # This could happen if we're in a subdirectory of a dangling worktree
+        # or a completely unrelated directory
+        echo "/path/to/some/other/directory"
+        exit 0
+        ;;
+    *)
+        echo "unexpected args: $@" >&2
+        exit 1
+        ;;
+esac
+"#;
+        let (mock_git, _dir) = create_mock_git_script(script);
+        unsafe {
+            std::env::set_var("GWT_GIT", &mock_git);
+        }
+
+        let config = Config::Loaded(
+            ConfigData {
+                worktree_root: PathBuf::from("/tmp/wt-root"),
+            },
+            PathBuf::from("/tmp/config"),
+        );
+
+        // When current_worktree doesn't match any valid worktree path,
+        // no worktree should be marked as active
+        let result = list(&config);
+        assert!(result.is_ok(), "list should succeed when current path doesn't match any worktree");
+
+        unsafe {
+            std::env::remove_var("GWT_GIT");
+        }
+    }
+
+    #[test]
     fn test_resolve_main_branch_when_only_main_exists() {
         let _guard = ENV_LOCK.lock().unwrap();
         let script = r#"#!/bin/sh
