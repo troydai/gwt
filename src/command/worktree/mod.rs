@@ -264,13 +264,16 @@ fi
 exit 1
 "#;
         let (mock_git, _dir) = create_mock_git_script(script);
+        let wt_root = _dir.path().join("wt-root");
+        std::fs::create_dir_all(&wt_root).unwrap();
+
         unsafe {
             std::env::set_var("GWT_GIT", &mock_git);
         }
 
         let config = Config::Loaded(
             ConfigData {
-                worktree_root: PathBuf::from("/tmp/wt-root"),
+                worktree_root: wt_root.clone(),
             },
             PathBuf::from("/tmp/config"),
         );
@@ -279,7 +282,7 @@ exit 1
         let path = compute_target_path(&git, &config, "feature-branch").unwrap();
 
         let hash = compute_worktree_hash("/path/to/my-repo", "feature-branch");
-        let expected_path = PathBuf::from("/tmp/wt-root").join(hash);
+        let expected_path = wt_root.join(hash);
         assert_eq!(path, expected_path);
 
         unsafe {
@@ -312,13 +315,16 @@ case "$@" in
 esac
 "#;
         let (mock_git, _dir) = create_mock_git_script(script);
+        let wt_root = _dir.path().join("wt-root");
+        std::fs::create_dir_all(&wt_root).unwrap();
+
         unsafe {
             std::env::set_var("GWT_GIT", &mock_git);
         }
 
         let config = Config::Loaded(
             ConfigData {
-                worktree_root: PathBuf::from("/tmp/wt-root"),
+                worktree_root: wt_root,
             },
             PathBuf::from("/tmp/config"),
         );

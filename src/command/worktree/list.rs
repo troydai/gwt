@@ -121,13 +121,16 @@ branch refs/heads/feature-branch"
 esac
 "#;
         let (mock_git, _dir) = create_mock_git_script(script);
+        let wt_root = _dir.path().join("wt-root");
+        std::fs::create_dir_all(&wt_root).unwrap();
+
         unsafe {
             std::env::set_var("GWT_GIT", &mock_git);
         }
 
         let config = Config::Loaded(
             ConfigData {
-                worktree_root: PathBuf::from("/tmp/wt-root"),
+                worktree_root: wt_root,
             },
             PathBuf::from("/tmp/config"),
         );
@@ -166,13 +169,16 @@ detached"
 esac
 "#;
         let (mock_git, _dir) = create_mock_git_script(script);
+        let wt_root = _dir.path().join("wt-root");
+        std::fs::create_dir_all(&wt_root).unwrap();
+
         unsafe {
             std::env::set_var("GWT_GIT", &mock_git);
         }
 
         let config = Config::Loaded(
             ConfigData {
-                worktree_root: PathBuf::from("/tmp/wt-root"),
+                worktree_root: wt_root,
             },
             PathBuf::from("/tmp/config"),
         );
@@ -212,13 +218,16 @@ branch refs/heads/feature-branch"
 esac
 "#;
         let (mock_git, _dir) = create_mock_git_script(script);
+        let wt_root = _dir.path().join("wt-root");
+        std::fs::create_dir_all(&wt_root).unwrap();
+
         unsafe {
             std::env::set_var("GWT_GIT", &mock_git);
         }
 
         let config = Config::Loaded(
             ConfigData {
-                worktree_root: PathBuf::from("/tmp/wt-root"),
+                worktree_root: wt_root,
             },
             PathBuf::from("/tmp/config"),
         );
@@ -259,13 +268,16 @@ branch refs/heads/feature-branch"
 esac
 "#;
         let (mock_git, _dir) = create_mock_git_script(script);
+        let wt_root = _dir.path().join("wt-root");
+        std::fs::create_dir_all(&wt_root).unwrap();
+
         unsafe {
             std::env::set_var("GWT_GIT", &mock_git);
         }
 
         let config = Config::Loaded(
             ConfigData {
-                worktree_root: PathBuf::from("/tmp/wt-root"),
+                worktree_root: wt_root,
             },
             PathBuf::from("/tmp/config"),
         );
@@ -314,13 +326,16 @@ branch refs/heads/feature-branch"
 esac
 "#;
         let (mock_git, _dir) = create_mock_git_script(script);
+        let wt_root = _dir.path().join("wt-root");
+        std::fs::create_dir_all(&wt_root).unwrap();
+
         unsafe {
             std::env::set_var("GWT_GIT", &mock_git);
         }
 
         let config = Config::Loaded(
             ConfigData {
-                worktree_root: PathBuf::from("/tmp/wt-root"),
+                worktree_root: wt_root,
             },
             PathBuf::from("/tmp/config"),
         );
@@ -370,13 +385,16 @@ branch refs/heads/feature-branch"
 esac
 "#;
         let (mock_git, _dir) = create_mock_git_script(script);
+        let wt_root = _dir.path().join("wt-root");
+        std::fs::create_dir_all(&wt_root).unwrap();
+
         unsafe {
             std::env::set_var("GWT_GIT", &mock_git);
         }
 
         let config = Config::Loaded(
             ConfigData {
-                worktree_root: PathBuf::from("/tmp/wt-root"),
+                worktree_root: wt_root,
             },
             PathBuf::from("/tmp/config"),
         );
@@ -432,13 +450,16 @@ branch refs/heads/charlie"
 esac
 "#;
         let (mock_git, _dir) = create_mock_git_script(script);
+        let wt_root = _dir.path().join("wt-root");
+        std::fs::create_dir_all(&wt_root).unwrap();
+
         unsafe {
             std::env::set_var("GWT_GIT", &mock_git);
         }
 
         let config = Config::Loaded(
             ConfigData {
-                worktree_root: PathBuf::from("/tmp/wt-root"),
+                worktree_root: wt_root,
             },
             PathBuf::from("/tmp/config"),
         );
@@ -491,13 +512,16 @@ detached"
 esac
 "#;
         let (mock_git, _dir) = create_mock_git_script(script);
+        let wt_root = _dir.path().join("wt-root");
+        std::fs::create_dir_all(&wt_root).unwrap();
+
         unsafe {
             std::env::set_var("GWT_GIT", &mock_git);
         }
 
         let config = Config::Loaded(
             ConfigData {
-                worktree_root: PathBuf::from("/tmp/wt-root"),
+                worktree_root: wt_root,
             },
             PathBuf::from("/tmp/config"),
         );
@@ -543,13 +567,16 @@ branch refs/heads/feature/this-is-a-very-long-branch-name-that-exceeds-thirty-tw
 esac
 "#;
         let (mock_git, _dir) = create_mock_git_script(script);
+        let wt_root = _dir.path().join("wt-root");
+        std::fs::create_dir_all(&wt_root).unwrap();
+
         unsafe {
             std::env::set_var("GWT_GIT", &mock_git);
         }
 
         let config = Config::Loaded(
             ConfigData {
-                worktree_root: PathBuf::from("/tmp/wt-root"),
+                worktree_root: wt_root,
             },
             PathBuf::from("/tmp/config"),
         );
@@ -579,7 +606,7 @@ branch refs/heads/short
 
 worktree /path/to/very-long
 HEAD 222222222222222
-branch refs/heads/feature/this-is-a-very-long-branch-name-that-exceeds-thirty-two-chars"
+branch refs/heads/feature/this-is-a-very-long-branch-name-that-is-way-longer-than-max-width-to-ensure-no-truncation-happens-when-full-is-used"
         exit 0
         ;;
     "rev-parse --show-toplevel")
@@ -593,13 +620,16 @@ branch refs/heads/feature/this-is-a-very-long-branch-name-that-exceeds-thirty-tw
 esac
 "#;
         let (mock_git, _dir) = create_mock_git_script(script);
+        let wt_root = _dir.path().join("wt-root");
+        std::fs::create_dir_all(&wt_root).unwrap();
+
         unsafe {
             std::env::set_var("GWT_GIT", &mock_git);
         }
 
         let config = Config::Loaded(
             ConfigData {
-                worktree_root: PathBuf::from("/tmp/wt-root"),
+                worktree_root: wt_root,
             },
             PathBuf::from("/tmp/config"),
         );
