@@ -13,14 +13,48 @@ pub fn list(config: &Config) -> Result<()> {
     config.ensure_worktree_root()?;
 
     let git = Git::new();
-    let worktrees = git.list_worktrees()?;
+    let mut worktrees = git.list_worktrees()?;
+
+    // Detect the current worktree path (may fail if not in a git worktree)
+    let current_worktree = git.git_toplevel().ok();
+
+    // Sort worktrees so the active one appears first
+    worktrees.sort_by(|a, b| {
+        let a_is_active = current_worktree.as_ref().is_some_and(|cw| cw == a.path());
+        let b_is_active = current_worktree.as_ref().is_some_and(|cw| cw == b.path());
+        // Active worktree should come first (true > false when reversed)
+        b_is_active.cmp(&a_is_active)
+    });
 
     for wt in worktrees {
-        let path = wt.path().display();
+        let is_active = current_worktree.as_ref().is_some_and(|cw| cw == wt.path());
+
+        // Truncate commit hash to 7 characters
         let head = wt.head();
-        match wt.branch() {
-            Some(branch) => println!("{} {} [{}]", path, head, branch),
-            None => println!("{} {}", path, head),
+        let short_hash = &head[..7.min(head.len())];
+
+        // Format branch name or "(detached)" for detached HEAD
+        let branch_name = wt.branch().unwrap_or("(detached)");
+
+        // Apply color styling: green for branch, yellow for hash
+        let styled_branch = style(branch_name).green();
+        let styled_hash = style(short_hash).yellow();
+
+        // Format the marker and path
+        let marker = if is_active { "*" } else { " " };
+        let path = wt.path().display();
+
+        // Print with active worktree highlighted in bold
+        if is_active {
+            println!(
+                "{} {} {} {}",
+                style(marker).bold(),
+                style(styled_branch).bold(),
+                style(styled_hash).bold(),
+                style(path).bold()
+            );
+        } else {
+            println!("{} {} {} {}", marker, styled_branch, styled_hash, path);
         }
     }
 
@@ -344,19 +378,26 @@ esac
     fn test_list_worktrees() {
         let _guard = ENV_LOCK.lock().unwrap();
         let script = r#"#!/bin/sh
-if [ "$1" = "worktree" ] && [ "$2" = "list" ] && [ "$3" = "--porcelain" ]; then
-    echo "worktree /path/to/main
-HEAD abc123
+case "$1 $2 $3" in
+    "worktree list --porcelain")
+        echo "worktree /path/to/main
+HEAD abc123def456789
 branch refs/heads/main
 
 worktree /path/to/feature
-HEAD def456
+HEAD def456abc789012
 branch refs/heads/feature-branch"
-    exit 0
-else
-    echo "unexpected args: $@" >&2
-    exit 1
-fi
+        exit 0
+        ;;
+    "rev-parse --show-toplevel")
+        echo "/path/to/feature"
+        exit 0
+        ;;
+    *)
+        echo "unexpected args: $@" >&2
+        exit 1
+        ;;
+esac
 "#;
         let (mock_git, _dir) = create_mock_git_script(script);
         unsafe {
@@ -382,19 +423,26 @@ fi
     fn test_list_worktrees_with_detached() {
         let _guard = ENV_LOCK.lock().unwrap();
         let script = r#"#!/bin/sh
-if [ "$1" = "worktree" ] && [ "$2" = "list" ] && [ "$3" = "--porcelain" ]; then
-    echo "worktree /path/to/main
-HEAD abc123
+case "$1 $2 $3" in
+    "worktree list --porcelain")
+        echo "worktree /path/to/main
+HEAD abc123def456789
 branch refs/heads/main
 
 worktree /path/to/detached
-HEAD ghi789
+HEAD ghi789abc123456
 detached"
-    exit 0
-else
-    echo "unexpected args: $@" >&2
-    exit 1
-fi
+        exit 0
+        ;;
+    "rev-parse --show-toplevel")
+        echo "/path/to/main"
+        exit 0
+        ;;
+    *)
+        echo "unexpected args: $@" >&2
+        exit 1
+        ;;
+esac
 "#;
         let (mock_git, _dir) = create_mock_git_script(script);
         unsafe {
@@ -408,6 +456,101 @@ fi
             PathBuf::from("/tmp/config"),
         );
 
+        let result = list(&config);
+        assert!(result.is_ok());
+
+        unsafe {
+            std::env::remove_var("GWT_GIT");
+        }
+    }
+
+    #[test]
+    fn test_list_worktrees_active_worktree_first() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        // The active worktree (/path/to/feature) is listed second in git output,
+        // but should appear first in the formatted output
+        let script = r#"#!/bin/sh
+case "$1 $2 $3" in
+    "worktree list --porcelain")
+        echo "worktree /path/to/main
+HEAD abc123def456789
+branch refs/heads/main
+
+worktree /path/to/feature
+HEAD def456abc789012
+branch refs/heads/feature-branch"
+        exit 0
+        ;;
+    "rev-parse --show-toplevel")
+        echo "/path/to/feature"
+        exit 0
+        ;;
+    *)
+        echo "unexpected args: $@" >&2
+        exit 1
+        ;;
+esac
+"#;
+        let (mock_git, _dir) = create_mock_git_script(script);
+        unsafe {
+            std::env::set_var("GWT_GIT", &mock_git);
+        }
+
+        let config = Config::Loaded(
+            ConfigData {
+                worktree_root: PathBuf::from("/tmp/wt-root"),
+            },
+            PathBuf::from("/tmp/config"),
+        );
+
+        // The list function should succeed and prioritize active worktree
+        let result = list(&config);
+        assert!(result.is_ok());
+
+        unsafe {
+            std::env::remove_var("GWT_GIT");
+        }
+    }
+
+    #[test]
+    fn test_list_worktrees_no_current_worktree() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        // Test when git_toplevel fails (e.g., not in any worktree)
+        let script = r#"#!/bin/sh
+case "$1 $2 $3" in
+    "worktree list --porcelain")
+        echo "worktree /path/to/main
+HEAD abc123def456789
+branch refs/heads/main
+
+worktree /path/to/feature
+HEAD def456abc789012
+branch refs/heads/feature-branch"
+        exit 0
+        ;;
+    "rev-parse --show-toplevel")
+        echo "fatal: not a git repository" >&2
+        exit 128
+        ;;
+    *)
+        echo "unexpected args: $@" >&2
+        exit 1
+        ;;
+esac
+"#;
+        let (mock_git, _dir) = create_mock_git_script(script);
+        unsafe {
+            std::env::set_var("GWT_GIT", &mock_git);
+        }
+
+        let config = Config::Loaded(
+            ConfigData {
+                worktree_root: PathBuf::from("/tmp/wt-root"),
+            },
+            PathBuf::from("/tmp/config"),
+        );
+
+        // The list function should still succeed even if we can't detect current worktree
         let result = list(&config);
         assert!(result.is_ok());
 
