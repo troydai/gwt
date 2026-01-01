@@ -20,7 +20,11 @@ pub enum Commands {
     Config(config::ConfigCommands),
 
     /// List all worktrees
-    Ls,
+    Ls {
+        /// Show full branch names without truncation
+        #[arg(long = "full")]
+        full: bool,
+    },
 
     /// Switch to an existing worktree for a branch (prints path on success)
     Sw {

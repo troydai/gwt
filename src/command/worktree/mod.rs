@@ -9,7 +9,7 @@ use std::path::PathBuf;
 use console::{Term, style};
 use dialoguer::Confirm;
 
-pub fn list(config: &Config) -> Result<()> {
+pub fn list(config: &Config, full: bool) -> Result<()> {
     config.ensure_worktree_root()?;
 
     let git = Git::new();
@@ -40,11 +40,20 @@ pub fn list(config: &Config) -> Result<()> {
     });
 
     // Calculate the maximum branch name width for column alignment
-    let max_branch_width = worktrees
-        .iter()
-        .map(|wt| wt.branch().unwrap_or("(detached)").len())
-        .max()
-        .unwrap_or(0);
+    // Cap at 20 characters unless --full is specified
+    let max_branch_width = if full {
+        worktrees
+            .iter()
+            .map(|wt| wt.branch().unwrap_or("(detached)").len())
+            .max()
+            .unwrap_or(0)
+    } else {
+        worktrees
+            .iter()
+            .map(|wt| wt.branch().unwrap_or("(detached)").len().min(20))
+            .max()
+            .unwrap_or(0)
+    };
 
     for wt in worktrees {
         let is_active = current_worktree.as_ref().is_some_and(|cw| cw == wt.path());
@@ -56,9 +65,17 @@ pub fn list(config: &Config) -> Result<()> {
         // Format branch name or "(detached)" for detached HEAD
         let branch_name = wt.branch().unwrap_or("(detached)");
 
-        // Apply color styling: green for branch, yellow for hash
-        let styled_branch = style(format!("{:<width$}", branch_name, width = max_branch_width)).green();
+        // Truncate branch name at 20 characters unless --full is specified
+        let display_branch = if full || branch_name.len() <= 20 {
+            branch_name.to_string()
+        } else {
+            format!("{}…", &branch_name[..19])
+        };
+
+        // Apply color styling: yellow for hash, green for branch
+        // Column order: marker, hash, branch, path
         let styled_hash = style(short_hash).yellow();
+        let styled_branch = style(format!("{:<width$}", display_branch, width = max_branch_width)).green();
 
         // Format the marker and path
         let marker = if is_active { "*" } else { " " };
@@ -69,12 +86,12 @@ pub fn list(config: &Config) -> Result<()> {
             println!(
                 "{} {} {} {}",
                 style(marker).bold(),
-                style(styled_branch).bold(),
                 style(styled_hash).bold(),
+                style(styled_branch).bold(),
                 style(path).bold()
             );
         } else {
-            println!("{} {} {} {}", marker, styled_branch, styled_hash, path);
+            println!("{} {} {} {}", marker, styled_hash, styled_branch, path);
         }
     }
 
@@ -431,7 +448,7 @@ esac
             PathBuf::from("/tmp/config"),
         );
 
-        let result = list(&config);
+        let result = list(&config, false);
         assert!(result.is_ok());
 
         unsafe {
@@ -476,7 +493,7 @@ esac
             PathBuf::from("/tmp/config"),
         );
 
-        let result = list(&config);
+        let result = list(&config, false);
         assert!(result.is_ok());
 
         unsafe {
@@ -524,7 +541,7 @@ esac
         );
 
         // The list function should succeed and prioritize active worktree
-        let result = list(&config);
+        let result = list(&config, false);
         assert!(result.is_ok());
 
         unsafe {
@@ -571,7 +588,7 @@ esac
         );
 
         // The list function should still succeed even if we can't detect current worktree
-        let result = list(&config);
+        let result = list(&config, false);
         assert!(result.is_ok());
 
         unsafe {
@@ -627,7 +644,7 @@ esac
 
         // The list function should gracefully handle dangling directory scenario
         // It will list all valid worktrees, with none marked as active
-        let result = list(&config);
+        let result = list(&config, false);
         assert!(result.is_ok(), "list should succeed even in dangling worktree directory");
 
         unsafe {
@@ -680,7 +697,7 @@ esac
 
         // When current_worktree doesn't match any valid worktree path,
         // no worktree should be marked as active
-        let result = list(&config);
+        let result = list(&config, false);
         assert!(result.is_ok(), "list should succeed when current path doesn't match any worktree");
 
         unsafe {
@@ -739,7 +756,7 @@ esac
 
         // The list function should succeed and sort alphabetically
         // Expected order: apple, charlie, main, zebra
-        let result = list(&config);
+        let result = list(&config, false);
         assert!(result.is_ok(), "list should succeed with alphabetical sorting");
 
         unsafe {
@@ -797,7 +814,7 @@ esac
 
         // The list function should succeed with active first, then alphabetically
         // Expected order: main (active), apple, charlie, zebra
-        let result = list(&config);
+        let result = list(&config, false);
         assert!(result.is_ok(), "list should succeed with active first then alphabetical");
 
         unsafe {
@@ -854,8 +871,102 @@ esac
         // The list function should sort named branches first (alphabetically),
         // then detached worktrees
         // Expected order: apple, zebra, (detached), (detached)
-        let result = list(&config);
+        let result = list(&config, false);
         assert!(result.is_ok(), "list should succeed with detached worktrees last");
+
+        unsafe {
+            std::env::remove_var("GWT_GIT");
+        }
+    }
+
+    #[test]
+    fn test_list_worktrees_truncate_long_branch_names() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        // Test that branch names longer than 20 characters are truncated by default
+        let script = r#"#!/bin/sh
+case "$1 $2 $3" in
+    "worktree list --porcelain")
+        echo "worktree /path/to/short
+HEAD 111111111111111
+branch refs/heads/short
+
+worktree /path/to/very-long
+HEAD 222222222222222
+branch refs/heads/feature/this-is-a-very-long-branch-name-that-exceeds-twenty-chars"
+        exit 0
+        ;;
+    "rev-parse --show-toplevel")
+        echo "fatal: not a git repository" >&2
+        exit 128
+        ;;
+    *)
+        echo "unexpected args: $@" >&2
+        exit 1
+        ;;
+esac
+"#;
+        let (mock_git, _dir) = create_mock_git_script(script);
+        unsafe {
+            std::env::set_var("GWT_GIT", &mock_git);
+        }
+
+        let config = Config::Loaded(
+            ConfigData {
+                worktree_root: PathBuf::from("/tmp/wt-root"),
+            },
+            PathBuf::from("/tmp/config"),
+        );
+
+        // Test without --full flag (should truncate)
+        let result = list(&config, false);
+        assert!(result.is_ok(), "list should succeed with truncated branch names");
+
+        unsafe {
+            std::env::remove_var("GWT_GIT");
+        }
+    }
+
+    #[test]
+    fn test_list_worktrees_full_flag_shows_complete_branch_names() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        // Test that --full flag shows complete branch names without truncation
+        let script = r#"#!/bin/sh
+case "$1 $2 $3" in
+    "worktree list --porcelain")
+        echo "worktree /path/to/short
+HEAD 111111111111111
+branch refs/heads/short
+
+worktree /path/to/very-long
+HEAD 222222222222222
+branch refs/heads/feature/this-is-a-very-long-branch-name-that-exceeds-twenty-chars"
+        exit 0
+        ;;
+    "rev-parse --show-toplevel")
+        echo "fatal: not a git repository" >&2
+        exit 128
+        ;;
+    *)
+        echo "unexpected args: $@" >&2
+        exit 1
+        ;;
+esac
+"#;
+        let (mock_git, _dir) = create_mock_git_script(script);
+        unsafe {
+            std::env::set_var("GWT_GIT", &mock_git);
+        }
+
+        let config = Config::Loaded(
+            ConfigData {
+                worktree_root: PathBuf::from("/tmp/wt-root"),
+            },
+            PathBuf::from("/tmp/config"),
+        );
+
+        // Test with --full flag (should not truncate)
+        let result = list(&config, true);
+        assert!(result.is_ok(), "list should succeed with full branch names");
 
         unsafe {
             std::env::remove_var("GWT_GIT");
