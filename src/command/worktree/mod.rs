@@ -602,4 +602,115 @@ esac
             std::env::remove_var("GWT_GIT");
         }
     }
+
+    #[test]
+    fn test_handle_remote_branch_ambiguous() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        let script = r#"#!/bin/sh
+if [ "$1" = "for-each-ref" ] && [ "$3" = "refs/remotes/*/feature" ]; then
+    echo "refs/remotes/origin/feature"
+    echo "refs/remotes/upstream/feature"
+    exit 0
+fi
+exit 1
+"#;
+        let (mock_git, _dir) = create_mock_git_script(script);
+        unsafe {
+            std::env::set_var("GWT_GIT", &mock_git);
+        }
+
+        let git = Git::new();
+        let result = handle_remote_branch(&git, "feature", None);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Ambiguous"));
+
+        unsafe {
+            std::env::remove_var("GWT_GIT");
+        }
+    }
+
+    #[test]
+    fn test_handle_remote_branch_not_found() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        let script = r#"#!/bin/sh
+if [ "$1" = "for-each-ref" ] && [ "$3" = "refs/remotes/*/feature" ]; then
+    exit 0
+fi
+exit 1
+"#;
+        let (mock_git, _dir) = create_mock_git_script(script);
+        unsafe {
+            std::env::set_var("GWT_GIT", &mock_git);
+        }
+
+        let git = Git::new();
+        let result = handle_remote_branch(&git, "feature", None);
+        assert!(result.is_err());
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("not found locally or in any remote")
+        );
+
+        unsafe {
+            std::env::remove_var("GWT_GIT");
+        }
+    }
+
+    #[test]
+    fn test_switch_prefers_local() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        let script = r#"#!/bin/sh
+case "$@" in
+    "branch --show-current")
+        echo "current"
+        exit 0
+        ;;
+    "for-each-ref --format=%(refname) refs/heads/local-branch")
+        echo "refs/heads/local-branch"
+        exit 0
+        ;;
+    "worktree list --porcelain")
+        echo "worktree /path/to/repo"
+        echo "HEAD abc"
+        echo "branch refs/heads/main"
+        exit 0
+        ;;
+    "rev-parse --show-toplevel")
+        echo "/path/to/repo"
+        exit 0
+        ;;
+    "worktree add "* )
+        exit 0
+        ;;
+    *)
+        echo "unexpected args: $@" >&2
+        exit 1
+        ;;
+esac
+"#;
+        let (mock_git, _dir) = create_mock_git_script(script);
+        let wt_root = _dir.path().join("wt-root");
+        std::fs::create_dir_all(&wt_root).unwrap();
+
+        unsafe {
+            std::env::set_var("GWT_GIT", &mock_git);
+        }
+
+        let config = Config::Loaded(
+            ConfigData {
+                worktree_root: wt_root,
+            },
+            PathBuf::from("/tmp/config"),
+        );
+
+        // switch(config, branch, create, use_main, remote)
+        let result = switch(&config, Some("local-branch"), false, false, None);
+        assert!(result.is_ok());
+
+        unsafe {
+            std::env::remove_var("GWT_GIT");
+        }
+    }
 }
