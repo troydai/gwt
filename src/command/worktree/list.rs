@@ -69,7 +69,7 @@ pub fn list(config: &Config, full: bool) -> Result<()> {
 
         // Format the marker and path
         let marker = if is_active { "*" } else { " " };
-        let path = wt.path().display();
+        let styled_path = style(wt.path().display()).cyan();
 
         // Print with active worktree highlighted in bold
         if is_active {
@@ -78,10 +78,13 @@ pub fn list(config: &Config, full: bool) -> Result<()> {
                 style(marker).bold(),
                 style(styled_hash).bold(),
                 style(styled_branch).bold(),
-                style(path).bold()
+                style(styled_path).bold()
             );
         } else {
-            println!("{} {} {} {}", marker, styled_hash, styled_branch, path);
+            println!(
+                "{} {} {} {}",
+                marker, styled_hash, styled_branch, styled_path
+            );
         }
     }
 
