@@ -34,20 +34,18 @@ pub fn list(config: &Config, full: bool) -> Result<()> {
     });
 
     // Calculate the maximum branch name width for column alignment
-    // Cap at 20 characters unless --full is specified
-    let max_branch_width = if full {
-        worktrees
-            .iter()
-            .map(|wt| wt.branch().unwrap_or("(detached)").len())
-            .max()
-            .unwrap_or(0)
-    } else {
-        worktrees
-            .iter()
-            .map(|wt| wt.branch().unwrap_or("(detached)").len().min(20))
-            .max()
-            .unwrap_or(0)
-    };
+    // Cap at 32 characters unless --full is specified
+    let max_branch_width = worktrees
+        .iter()
+        .map(|wt| {
+            if full {
+                wt.branch().unwrap_or("(detached)").len()
+            } else {
+                wt.branch().unwrap_or("(detached)").len().min(32)
+            }
+        })
+        .max()
+        .unwrap_or(0);
 
     for wt in worktrees {
         let is_active = current_worktree.as_ref().is_some_and(|cw| cw == wt.path());
