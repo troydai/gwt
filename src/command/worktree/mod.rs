@@ -13,7 +13,13 @@ use std::path::PathBuf;
 use console::{Term, style};
 use dialoguer::Confirm;
 
-pub fn switch(config: &Config, branch: Option<&str>, create: bool, use_main: bool) -> Result<()> {
+pub fn switch(
+    config: &Config,
+    branch: Option<&str>,
+    create: bool,
+    use_main: bool,
+    remote: Option<&str>,
+) -> Result<()> {
     config.ensure_worktree_root()?;
 
     let git = Git::new();
@@ -21,6 +27,8 @@ pub fn switch(config: &Config, branch: Option<&str>, create: bool, use_main: boo
     // Resolve the branch name based on the flag
     let target_branch = if use_main {
         resolve_main_branch(&git)?
+    } else if let Some(remote_branch) = remote {
+        handle_remote_branch(&git, remote_branch)?
     } else {
         branch
             .ok_or_else(|| anyhow!("Branch name is required"))?
@@ -174,6 +182,41 @@ pub fn remove(
     }
 
     Ok(())
+}
+
+fn handle_remote_branch(git: &Git, remote_branch: &str) -> Result<String> {
+    // remote_branch is like "origin/feature"
+    // local branch should be "feature"
+    let parts: Vec<&str> = remote_branch.splitn(2, '/').collect();
+    if parts.len() < 2 {
+        bail!(
+            "Invalid remote branch format. Expected 'remote/branch', got '{}'",
+            remote_branch
+        );
+    }
+    let local_branch = parts[1].to_string();
+
+    if git.branch_exists(&local_branch)? {
+        eprintln!("Local branch '{}' already exists. Using it.", local_branch);
+        return Ok(local_branch);
+    }
+
+    if !git.remote_branch_exists(remote_branch)? {
+        bail!("Remote branch '{}' does not exist.", remote_branch);
+    }
+
+    git.create_branch_from_remote(&local_branch, remote_branch)
+        .context(format!(
+            "Failed to create local branch '{}' from remote '{}'",
+            local_branch, remote_branch
+        ))?;
+
+    eprintln!(
+        "Created local branch '{}' tracking remote '{}'.",
+        local_branch, remote_branch
+    );
+
+    Ok(local_branch)
 }
 
 fn compute_target_path(git: &Git, config: &Config, branch: &str) -> Result<PathBuf> {
@@ -469,6 +512,42 @@ esac
                 .to_string()
                 .contains("Neither 'main' nor 'master' branch exists")
         );
+
+        unsafe {
+            std::env::remove_var("GWT_GIT");
+        }
+    }
+
+    #[test]
+    fn test_handle_remote_branch() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        let script = r#"#!/bin/sh
+case "$@" in
+    "for-each-ref --format=%(refname) refs/remotes/origin/feature")
+        echo "refs/remotes/origin/feature"
+        exit 0
+        ;;
+    "for-each-ref --format=%(refname) refs/heads/feature")
+        exit 0
+        ;;
+    "branch --track feature origin/feature")
+        exit 0
+        ;;
+    *)
+        echo "unexpected args: $@" >&2
+        exit 1
+        ;;
+esac
+"#;
+        let (mock_git, _dir) = create_mock_git_script(script);
+        unsafe {
+            std::env::set_var("GWT_GIT", &mock_git);
+        }
+
+        let git = Git::new();
+        let result = handle_remote_branch(&git, "origin/feature");
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "feature");
 
         unsafe {
             std::env::remove_var("GWT_GIT");

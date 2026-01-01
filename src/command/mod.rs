@@ -29,16 +29,20 @@ pub enum Commands {
     /// Switch to an existing worktree for a branch (prints path on success)
     Sw {
         /// Branch name to switch to
-        #[arg(required_unless_present = "main", conflicts_with = "main")]
+        #[arg(required_unless_present_any = ["main", "remote"], conflicts_with = "main", conflicts_with = "remote")]
         branch: Option<String>,
 
         /// Create a new branch
-        #[arg(short = 'b', long = "create-branch")]
+        #[arg(short = 'b', long = "create-branch", conflicts_with = "remote")]
         create: bool,
 
         /// Switch to the main branch (main or master)
-        #[arg(short = 'm', long = "main")]
+        #[arg(short = 'm', long = "main", conflicts_with = "remote")]
         main: bool,
+
+        /// Switch to a remote branch that is not yet created locally
+        #[arg(short = 'r', long = "remote")]
+        remote: Option<String>,
     },
 
     /// Remove a worktree by branch name

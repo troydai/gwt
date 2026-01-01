@@ -17,7 +17,8 @@ fn main() -> Result<()> {
             branch,
             create,
             main,
-        } => command::worktree::switch(&config, branch.as_deref(), create, main),
+            remote,
+        } => command::worktree::switch(&config, branch.as_deref(), create, main, remote.as_deref()),
         Commands::Rm {
             branch,
             delete_branch,

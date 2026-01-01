@@ -47,8 +47,20 @@ impl Git {
         Ok(stdout.lines().any(|line| line.trim() == ref_name))
     }
 
+    pub fn remote_branch_exists(&self, remote_branch: &str) -> Result<bool> {
+        let ref_name = format!("refs/remotes/{remote_branch}");
+        let output = self.run(&["for-each-ref", "--format=%(refname)", &ref_name])?;
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        Ok(stdout.lines().any(|line| line.trim() == ref_name))
+    }
+
     pub fn create_branch(&self, branch: &str) -> Result<()> {
         self.run(&["branch", branch])?;
+        Ok(())
+    }
+
+    pub fn create_branch_from_remote(&self, local: &str, remote: &str) -> Result<()> {
+        self.run(&["branch", "--track", local, remote])?;
         Ok(())
     }
 
@@ -489,6 +501,82 @@ fi
 
         let wt2 = git.find_worktree_by_branch("non-existent").unwrap();
         assert!(wt2.is_none());
+
+        unsafe {
+            std::env::remove_var("GWT_GIT");
+        }
+    }
+
+    #[test]
+    fn test_remote_branch_exists_true() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        let script = r#"#!/bin/sh
+if [ "$1" = "for-each-ref" ] && [ "$2" = "--format=%(refname)" ] && [ "$3" = "refs/remotes/origin/existing-remote" ]; then
+    echo "refs/remotes/origin/existing-remote"
+    exit 0
+else
+    echo "unexpected args: $@" >&2
+    exit 1
+fi
+"#;
+        let (mock_git, _dir) = create_mock_git_script(script);
+        unsafe {
+            std::env::set_var("GWT_GIT", &mock_git);
+        }
+
+        let git = Git::new();
+        assert!(git.remote_branch_exists("origin/existing-remote").unwrap());
+
+        unsafe {
+            std::env::remove_var("GWT_GIT");
+        }
+    }
+
+    #[test]
+    fn test_remote_branch_exists_false() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        let script = r#"#!/bin/sh
+if [ "$1" = "for-each-ref" ] && [ "$2" = "--format=%(refname)" ] && [ "$3" = "refs/remotes/origin/non-existent" ]; then
+    exit 0
+else
+    echo "unexpected args: $@" >&2
+    exit 1
+fi
+"#;
+        let (mock_git, _dir) = create_mock_git_script(script);
+        unsafe {
+            std::env::set_var("GWT_GIT", &mock_git);
+        }
+
+        let git = Git::new();
+        assert!(!git.remote_branch_exists("origin/non-existent").unwrap());
+
+        unsafe {
+            std::env::remove_var("GWT_GIT");
+        }
+    }
+
+    #[test]
+    fn test_create_branch_from_remote() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        let script = r#"#!/bin/sh
+if [ "$1" = "branch" ] && [ "$2" = "--track" ] && [ "$3" = "local-branch" ] && [ "$4" = "origin/remote-branch" ]; then
+    exit 0
+else
+    echo "unexpected args: $@" >&2
+    exit 1
+fi
+"#;
+        let (mock_git, _dir) = create_mock_git_script(script);
+        unsafe {
+            std::env::set_var("GWT_GIT", &mock_git);
+        }
+
+        let git = Git::new();
+        assert!(
+            git.create_branch_from_remote("local-branch", "origin/remote-branch")
+                .is_ok()
+        );
 
         unsafe {
             std::env::remove_var("GWT_GIT");

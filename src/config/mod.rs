@@ -226,6 +226,7 @@ mod tests {
             branch: Some("test".to_string()),
             create: false,
             main: false,
+            remote: None,
         };
         let loaded = load_with_home(&cmd, &home).unwrap();
         match loaded {
