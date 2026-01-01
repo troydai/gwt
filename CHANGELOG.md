@@ -4,6 +4,30 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-01-01
+
+### Added
+
+- Improved `gwt ls` command:
+  - Added color-coded output: yellow for commit hashes and green for branch names.
+  - Active worktree highlighting: the current worktree is now marked with an asterisk (`*`) and bolded.
+  - Automatic column alignment for branch names for better readability.
+  - New `--full` flag to display complete branch names without truncation (default max width is 32 characters).
+  - Alphabetical sorting of worktrees by branch name, with detached worktrees listed last.
+
+### Fixed
+
+- Improved handling of orphaned worktree directories: `gwt sw` now detects if a target directory exists but is not a valid Git worktree, providing clear instructions on how to resolve the conflict.
+
+### Changed
+
+- Enhanced configuration initialization: added descriptive messages and improved styling during the interactive setup process.
+
+### Internal
+
+- Added project-level Claude configuration and hooks for Rust environment setup.
+- Improved development environment setup for cloud and web environments.
+
 ## [0.2.0] - 2025-12-31
 
 ### Added

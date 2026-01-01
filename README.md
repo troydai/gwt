@@ -162,14 +162,20 @@ Interactively sets up or resets your configuration. It will prompt you for the `
 
 ---
 
-#### `gwt ls`
-Lists all worktrees in a concise format: `{path} {head} [{branch}]`. For detached worktrees, it only shows the path and the head commit hash.
+#### `gwt ls [--full]`
+Lists all worktrees managed by Git. The output is color-coded and aligned for readability:
+- **Marker**: An asterisk (`*`) indicates the current active worktree.
+- **Hash**: Shortened commit hash (yellow).
+- **Branch**: Branch name (green). Long names are truncated to 32 characters by default.
+- **Path**: Absolute path to the worktree (cyan).
+
+Use the `--full` flag to prevent truncation of long branch names.
 
 **Example:**
 ```bash
 $ gwt ls
-/home/user/repo 3fdfaf9 [main]
-/home/user/.gwt_store/a1b2c3d4 86ee136 [feature/api]
+* 3fdfaf9 main     /home/user/repo
+  86ee136 feat/api /home/user/.gwt_store/a1b2c3d4
 ```
 
 ---
