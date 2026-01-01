@@ -6,7 +6,8 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-- New feature: `gwt sw --remote <remote/branch>` (or `-r`) to switch to a remote branch that doesn't exist locally yet. It automatically creates the local tracking branch and a corresponding worktree.
+- Smart Remote Branch Switching: `gwt sw <branch>` now automatically looks for the branch in all remotes if it doesn't exist locally.
+- New `--remote <remote>` flag to resolve ambiguity when multiple remotes have the same branch name.
 - Added detailed inline documentation for internal Git utility methods.
 
 ## [0.3.0] - 2026-01-01
