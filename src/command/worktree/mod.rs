@@ -13,7 +13,13 @@ use std::path::PathBuf;
 use console::{Term, style};
 use dialoguer::Confirm;
 
-pub fn switch(config: &Config, branch: Option<&str>, create: bool, use_main: bool) -> Result<()> {
+pub fn switch(
+    config: &Config,
+    branch: Option<&str>,
+    create: bool,
+    use_main: bool,
+    remote: Option<&str>,
+) -> Result<()> {
     config.ensure_worktree_root()?;
 
     let git = Git::new();
@@ -35,13 +41,25 @@ pub fn switch(config: &Config, branch: Option<&str>, create: bool, use_main: boo
         std::process::exit(1);
     }
 
+    // Check if local branch exists or if we should look for a remote branch
+    let exists_locally = git
+        .branch_exists(&target_branch)
+        .context("Failed to check if branch exists")?;
+
+    let final_branch = if !exists_locally && !create {
+        // Try to resolve from remote
+        handle_remote_branch(&git, &target_branch, remote)?
+    } else {
+        target_branch
+    };
+
     let wt_path = git
         .list_worktrees()?
         .iter()
-        .find(|wt| wt.branch().is_some_and(|v| v == target_branch))
+        .find(|wt| wt.branch().is_some_and(|v| v == final_branch))
         .map(|wt| wt.path().clone())
         .map_or_else(
-            || create_worktree_and_print_path(&git, config, &target_branch, create),
+            || create_worktree_and_print_path(&git, config, &final_branch, create),
             Ok,
         )?;
 
@@ -174,6 +192,50 @@ pub fn remove(
     }
 
     Ok(())
+}
+
+fn handle_remote_branch(
+    git: &Git,
+    local_branch: &str,
+    remote_name_override: Option<&str>,
+) -> Result<String> {
+    let full_remote_path = if let Some(remote_name) = remote_name_override {
+        let path = format!("{}/{}", remote_name, local_branch);
+        if !git.remote_branch_exists(&path)? {
+            bail!("Remote branch '{}' does not exist.", path);
+        }
+        path
+    } else {
+        // Smart lookup like 'git checkout'
+        let matches = git.find_remote_branches_by_name(local_branch)?;
+        if matches.is_empty() {
+            bail!(
+                "Branch '{}' not found locally or in any remote.",
+                local_branch
+            );
+        } else if matches.len() > 1 {
+            bail!(
+                "Ambiguous branch name '{}'. Found in multiple remotes: {}. Please specify the remote using --remote (e.g., --remote {})",
+                local_branch,
+                matches.join(", "),
+                matches[0].split('/').next().unwrap_or("origin")
+            );
+        }
+        matches[0].clone()
+    };
+
+    git.create_branch_from_remote(local_branch, &full_remote_path)
+        .context(format!(
+            "Failed to create local branch '{}' from remote '{}'",
+            local_branch, full_remote_path
+        ))?;
+
+    eprintln!(
+        "Created local branch '{}' tracking remote '{}'.",
+        local_branch, full_remote_path
+    );
+
+    Ok(local_branch.to_string())
 }
 
 fn compute_target_path(git: &Git, config: &Config, branch: &str) -> Result<PathBuf> {
@@ -469,6 +531,183 @@ esac
                 .to_string()
                 .contains("Neither 'main' nor 'master' branch exists")
         );
+
+        unsafe {
+            std::env::remove_var("GWT_GIT");
+        }
+    }
+
+    #[test]
+    fn test_handle_remote_branch() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        let script = r#"#!/bin/sh
+case "$@" in
+    "for-each-ref --format=%(refname) refs/remotes/*/feature")
+        echo "refs/remotes/origin/feature"
+        exit 0
+        ;;
+    "branch --track feature origin/feature")
+        exit 0
+        ;;
+    *)
+        echo "unexpected args: $@" >&2
+        exit 1
+        ;;
+esac
+"#;
+        let (mock_git, _dir) = create_mock_git_script(script);
+        unsafe {
+            std::env::set_var("GWT_GIT", &mock_git);
+        }
+
+        let git = Git::new();
+        let result = handle_remote_branch(&git, "feature", None);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "feature");
+
+        unsafe {
+            std::env::remove_var("GWT_GIT");
+        }
+    }
+
+    #[test]
+    fn test_handle_remote_branch_with_override() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        let script = r#"#!/bin/sh
+case "$@" in
+    "for-each-ref --format=%(refname) refs/remotes/upstream/feature")
+        echo "refs/remotes/upstream/feature"
+        exit 0
+        ;;
+    "branch --track feature upstream/feature")
+        exit 0
+        ;;
+    *)
+        echo "unexpected args: $@" >&2
+        exit 1
+        ;;
+esac
+"#;
+        let (mock_git, _dir) = create_mock_git_script(script);
+        unsafe {
+            std::env::set_var("GWT_GIT", &mock_git);
+        }
+
+        let git = Git::new();
+        let result = handle_remote_branch(&git, "feature", Some("upstream"));
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "feature");
+
+        unsafe {
+            std::env::remove_var("GWT_GIT");
+        }
+    }
+
+    #[test]
+    fn test_handle_remote_branch_ambiguous() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        let script = r#"#!/bin/sh
+if [ "$1" = "for-each-ref" ] && [ "$3" = "refs/remotes/*/feature" ]; then
+    echo "refs/remotes/origin/feature"
+    echo "refs/remotes/upstream/feature"
+    exit 0
+fi
+exit 1
+"#;
+        let (mock_git, _dir) = create_mock_git_script(script);
+        unsafe {
+            std::env::set_var("GWT_GIT", &mock_git);
+        }
+
+        let git = Git::new();
+        let result = handle_remote_branch(&git, "feature", None);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Ambiguous"));
+
+        unsafe {
+            std::env::remove_var("GWT_GIT");
+        }
+    }
+
+    #[test]
+    fn test_handle_remote_branch_not_found() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        let script = r#"#!/bin/sh
+if [ "$1" = "for-each-ref" ] && [ "$3" = "refs/remotes/*/feature" ]; then
+    exit 0
+fi
+exit 1
+"#;
+        let (mock_git, _dir) = create_mock_git_script(script);
+        unsafe {
+            std::env::set_var("GWT_GIT", &mock_git);
+        }
+
+        let git = Git::new();
+        let result = handle_remote_branch(&git, "feature", None);
+        assert!(result.is_err());
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("not found locally or in any remote")
+        );
+
+        unsafe {
+            std::env::remove_var("GWT_GIT");
+        }
+    }
+
+    #[test]
+    fn test_switch_prefers_local() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        let script = r#"#!/bin/sh
+case "$@" in
+    "branch --show-current")
+        echo "current"
+        exit 0
+        ;;
+    "for-each-ref --format=%(refname) refs/heads/local-branch")
+        echo "refs/heads/local-branch"
+        exit 0
+        ;;
+    "worktree list --porcelain")
+        echo "worktree /path/to/repo"
+        echo "HEAD abc"
+        echo "branch refs/heads/main"
+        exit 0
+        ;;
+    "rev-parse --show-toplevel")
+        echo "/path/to/repo"
+        exit 0
+        ;;
+    "worktree add "* )
+        exit 0
+        ;;
+    *)
+        echo "unexpected args: $@" >&2
+        exit 1
+        ;;
+esac
+"#;
+        let (mock_git, _dir) = create_mock_git_script(script);
+        let wt_root = _dir.path().join("wt-root");
+        std::fs::create_dir_all(&wt_root).unwrap();
+
+        unsafe {
+            std::env::set_var("GWT_GIT", &mock_git);
+        }
+
+        let config = Config::Loaded(
+            ConfigData {
+                worktree_root: wt_root,
+            },
+            PathBuf::from("/tmp/config"),
+        );
+
+        // switch(config, branch, create, use_main, remote)
+        let result = switch(&config, Some("local-branch"), false, false, None);
+        assert!(result.is_ok());
 
         unsafe {
             std::env::remove_var("GWT_GIT");

@@ -39,6 +39,10 @@ pub enum Commands {
         /// Switch to the main branch (main or master)
         #[arg(short = 'm', long = "main")]
         main: bool,
+
+        /// Specify the remote to resolve ambiguity when multiple remotes have the same branch name
+        #[arg(long = "remote")]
+        remote: Option<String>,
     },
 
     /// Remove a worktree by branch name
