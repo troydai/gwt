@@ -1,0 +1,3 @@
+[submodule "shared/claude"]
+	path = shared/claude
+	url = git@github.com:troydai/my-claude-settings.git
