@@ -49,6 +49,11 @@ impl Git {
 
     pub fn remote_branch_exists(&self, remote_branch: &str) -> Result<bool> {
         let ref_name = format!("refs/remotes/{remote_branch}");
+        // Git stores remote branches as references in 'refs/remotes/'.
+        // We use 'for-each-ref' to search for the specific full reference path.
+        // If the branch exists, 'for-each-ref' will print the reference name.
+        // If it doesn't exist, it will produce no output. This is more reliable
+        // than 'git branch -r' which is designed for human-readable output.
         let output = self.run(&["for-each-ref", "--format=%(refname)", &ref_name])?;
         let stdout = String::from_utf8_lossy(&output.stdout);
         Ok(stdout.lines().any(|line| line.trim() == ref_name))
