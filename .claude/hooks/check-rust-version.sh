@@ -28,6 +28,18 @@ install_rustup() {
 install_gh() {
     echo "gh not found. Installing GitHub CLI..."
 
+    # Try apt-get first (works in most Debian/Ubuntu environments)
+    if command -v apt-get &> /dev/null; then
+        echo "Installing gh via apt-get..."
+        apt-get update -qq
+        apt-get install -y gh
+        echo "GitHub CLI installed successfully via apt-get."
+        return 0
+    fi
+
+    # Fallback: Try downloading from GitHub releases (may fail in restricted environments)
+    echo "apt-get not available, trying GitHub releases..."
+
     # Detect architecture
     ARCH=$(uname -m)
     case $ARCH in
@@ -57,16 +69,21 @@ install_gh() {
     GH_URL="https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_${ARCH}.tar.gz"
 
     echo "Downloading gh version ${GH_VERSION} for ${ARCH}..."
-    curl -fsSL "$GH_URL" | tar -xz -C /tmp
-    cp "/tmp/gh_${GH_VERSION}_linux_${ARCH}/bin/gh" "$HOME/.local/bin/"
-    rm -rf "/tmp/gh_${GH_VERSION}_linux_${ARCH}"
+    if curl -fsSL "$GH_URL" | tar -xz -C /tmp; then
+        cp "/tmp/gh_${GH_VERSION}_linux_${ARCH}/bin/gh" "$HOME/.local/bin/"
+        rm -rf "/tmp/gh_${GH_VERSION}_linux_${ARCH}"
 
-    # Ensure PATH includes ~/.local/bin
-    if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
-        export PATH="$HOME/.local/bin:$PATH"
+        # Ensure PATH includes ~/.local/bin
+        if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
+            export PATH="$HOME/.local/bin:$PATH"
+        fi
+
+        echo "GitHub CLI installed successfully from GitHub releases."
+    else
+        echo "Error: Failed to download GitHub CLI from releases."
+        echo "Please install gh manually: https://github.com/cli/cli#installation"
+        return 1
     fi
-
-    echo "GitHub CLI installed successfully."
 }
 
 # Main logic
