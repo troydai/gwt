@@ -45,10 +45,35 @@ eval "$(gwtree init bash)"
 eval (gwtree init fish)
 ```
 
-The shell integration includes tab completion for commands, branch names, and shell types. After sourcing, you can:
-- Type `gwt <TAB>` to see available commands
-- Type `gwt sw <TAB>` to see available worktree branches
-- Type `gwt rm <TAB>` to see available worktree branches to remove
+After adding the line, reload your shell configuration:
+```bash
+# For Bash
+source ~/.bashrc
+
+# For Zsh
+source ~/.zshrc
+
+# For Fish (or just restart the terminal)
+source ~/.config/fish/config.fish
+```
+
+### 3. Tab Completion
+
+The shell integration automatically includes tab completion. Once set up, you can:
+
+| Command | Action |
+|---------|--------|
+| `gwt <TAB>` | Show available commands (config, ls, sw, rm, etc.) |
+| `gwt sw <TAB>` | Show available worktree branches to switch to |
+| `gwt rm <TAB>` | Show available worktree branches to remove |
+| `gwt config <TAB>` | Show config subcommands (view, setup) |
+| `gwt init <TAB>` | Show available shells (bash, zsh, fish) |
+
+**Example:**
+```bash
+$ gwt sw f<TAB>
+feat/api-v2    feat/auth    fix-bug-123
+```
 
 ## Quick Start
 
