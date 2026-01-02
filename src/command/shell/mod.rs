@@ -53,7 +53,7 @@ fn generate_init(shell: &str) -> Result<String> {
 
 # Tab completion for gwt
 _gwt_completions() {
-    local cur prev words cword
+    local cur prev
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
@@ -61,7 +61,7 @@ _gwt_completions() {
     # Top-level commands
     local commands="config ls sw rm init current completion"
 
-    if [ "$cword" -eq 1 ]; then
+    if [ "$COMP_CWORD" -eq 1 ]; then
         COMPREPLY=($(compgen -W "$commands" -- "$cur"))
         return
     fi
