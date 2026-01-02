@@ -45,6 +45,11 @@ eval "$(gwtree init bash)"
 eval (gwtree init fish)
 ```
 
+The shell integration includes tab completion for commands, branch names, and shell types. After sourcing, you can:
+- Type `gwt <TAB>` to see available commands
+- Type `gwt sw <TAB>` to see available worktree branches
+- Type `gwt rm <TAB>` to see available worktree branches to remove
+
 ## Quick Start
 
 1. **Initialize**: Run `gwt` for the first time to set up your configuration.
@@ -194,7 +199,18 @@ $ gwt ls
 ---
 
 #### `gwtree init <shell>`
-Generates the shell integration code required for the `gwt` wrapper to function. This is typically used once during initial setup in your `.bashrc`, `.zshrc`, or `config.fish`. Supported shells: `bash`, `zsh`, `fish`.
+Generates the shell integration code required for the `gwt` wrapper to function, including tab completion. This is typically used once during initial setup in your `.bashrc`, `.zshrc`, or `config.fish`. Supported shells: `bash`, `zsh`, `fish`.
+
+---
+
+#### `gwtree completion <shell>`
+Generates static shell completion scripts using clap_complete with dynamic branch name suggestions. This is an alternative to the built-in completions from `gwtree init` for users who prefer to manage completion scripts separately. Supported shells: `bash`, `zsh`, `fish`.
+
+**Example:**
+```bash
+# Generate and source bash completions
+source <(gwtree completion bash)
+```
 
 ## Configuration
 

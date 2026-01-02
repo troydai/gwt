@@ -1,9 +1,10 @@
+pub mod completion;
 pub mod config;
 pub mod current;
 pub mod shell;
 pub mod worktree;
 
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 
 #[derive(Parser)]
 #[command(name = "gwt")]
@@ -24,6 +25,10 @@ pub enum Commands {
         /// Show full branch names without truncation
         #[arg(long = "full")]
         full: bool,
+
+        /// Output only branch names, one per line (for shell completion)
+        #[arg(long = "raw", hide = true)]
+        raw: bool,
     },
 
     /// Switch to an existing worktree for a branch (prints path on success)
@@ -68,4 +73,18 @@ pub enum Commands {
     /// Print current worktree and branch information
     #[command(alias = "c")]
     Current,
+
+    /// Generate shell completion scripts
+    Completion {
+        /// Shell to generate completions for
+        #[arg(value_enum)]
+        shell: ShellType,
+    },
+}
+
+#[derive(Clone, Copy, ValueEnum)]
+pub enum ShellType {
+    Bash,
+    Zsh,
+    Fish,
 }
