@@ -4,10 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-01-02
+
 ### Added
 
 - Smart Remote Branch Switching: `gwt sw <branch>` now automatically looks for the branch in all remotes if it doesn't exist locally.
 - New `--remote <remote>` flag to resolve ambiguity when multiple remotes have the same branch name.
+- Shell completion for `gwt sw` command: `gwt sw <TAB>` now suggests local and remote branches.
 - Added detailed inline documentation for internal Git utility methods.
 
 ## [0.3.0] - 2026-01-01

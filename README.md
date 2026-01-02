@@ -64,7 +64,7 @@ The shell integration automatically includes tab completion. Once set up, you ca
 | Command | Action |
 |---------|--------|
 | `gwt <TAB>` | Show available commands (config, ls, sw, rm, etc.) |
-| `gwt sw <TAB>` | Show available worktree branches to switch to |
+| `gwt sw <TAB>` | Show available worktree branches (local and remote) to switch to |
 | `gwt rm <TAB>` | Show available worktree branches to remove |
 | `gwt config <TAB>` | Show config subcommands (view, setup) |
 | `gwt init <TAB>` | Show available shells (bash, zsh, fish) |
