@@ -5,14 +5,11 @@ use console::style;
 
 const MAX_BRANCH_WIDTH: usize = 32;
 
-pub fn list(config: &Config, full: bool) -> Result<()> {
+pub fn list(config: &Config, full: bool, raw: bool) -> Result<()> {
     config.ensure_worktree_root()?;
 
     let git = Git::new();
     let mut worktrees = git.list_worktrees()?;
-
-    // Detect the current worktree path (may fail if not in a git worktree)
-    let current_worktree = git.git_toplevel().ok();
 
     // Sort worktrees by branch name alphabetically
     // Detached worktrees (None) come after named branches
@@ -22,6 +19,19 @@ pub fn list(config: &Config, full: bool) -> Result<()> {
         (None, Some(_)) => std::cmp::Ordering::Greater,
         (None, None) => std::cmp::Ordering::Equal,
     });
+
+    // Raw mode: output only branch names, one per line (for shell completion)
+    if raw {
+        for wt in worktrees {
+            if let Some(branch) = wt.branch() {
+                println!("{}", branch);
+            }
+        }
+        return Ok(());
+    }
+
+    // Detect the current worktree path (may fail if not in a git worktree)
+    let current_worktree = git.git_toplevel().ok();
 
     // Calculate the maximum branch name width for column alignment
     // Cap at MAX_BRANCH_WIDTH characters unless --full is specified
@@ -138,7 +148,7 @@ esac
             PathBuf::from("/tmp/config"),
         );
 
-        let result = list(&config, false);
+        let result = list(&config, false, false);
         assert!(result.is_ok());
 
         unsafe {
@@ -186,7 +196,7 @@ esac
             PathBuf::from("/tmp/config"),
         );
 
-        let result = list(&config, false);
+        let result = list(&config, false, false);
         assert!(result.is_ok());
 
         unsafe {
@@ -236,7 +246,7 @@ esac
         );
 
         // The list function should succeed and sort by branch name (feature-branch before main)
-        let result = list(&config, false);
+        let result = list(&config, false, false);
         assert!(result.is_ok());
 
         unsafe {
@@ -286,7 +296,7 @@ esac
         );
 
         // The list function should still succeed even if we can't detect current worktree
-        let result = list(&config, false);
+        let result = list(&config, false, false);
         assert!(result.is_ok());
 
         unsafe {
@@ -345,7 +355,7 @@ esac
 
         // The list function should gracefully handle dangling directory scenario
         // It will list all valid worktrees, with none marked as active
-        let result = list(&config, false);
+        let result = list(&config, false, false);
         assert!(
             result.is_ok(),
             "list should succeed even in dangling worktree directory"
@@ -404,7 +414,7 @@ esac
 
         // When current_worktree doesn't match any valid worktree path,
         // no worktree should be marked as active
-        let result = list(&config, false);
+        let result = list(&config, false, false);
         assert!(
             result.is_ok(),
             "list should succeed when current path doesn't match any worktree"
@@ -469,7 +479,7 @@ esac
 
         // The list function should succeed and sort alphabetically
         // Expected order: apple, charlie, main, zebra
-        let result = list(&config, false);
+        let result = list(&config, false, false);
         assert!(
             result.is_ok(),
             "list should succeed with alphabetical sorting"
@@ -532,7 +542,7 @@ esac
         // The list function should sort named branches first (alphabetically),
         // then detached worktrees
         // Expected order: apple, zebra, (detached), (detached)
-        let result = list(&config, false);
+        let result = list(&config, false, false);
         assert!(
             result.is_ok(),
             "list should succeed with detached worktrees last"
@@ -585,7 +595,7 @@ esac
         );
 
         // Test without --full flag (should truncate)
-        let result = list(&config, false);
+        let result = list(&config, false, false);
         assert!(
             result.is_ok(),
             "list should succeed with truncated branch names"
@@ -638,7 +648,7 @@ esac
         );
 
         // Test with --full flag (should not truncate)
-        let result = list(&config, true);
+        let result = list(&config, true, false);
         assert!(result.is_ok(), "list should succeed with full branch names");
 
         unsafe {

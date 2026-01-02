@@ -12,7 +12,7 @@ fn main() -> Result<()> {
 
     match cli.command {
         Commands::Config(config_command) => command::config::handle(&config, &config_command),
-        Commands::Ls { full } => command::worktree::list(&config, full),
+        Commands::Ls { full, raw } => command::worktree::list(&config, full, raw),
         Commands::Sw {
             branch,
             create,
@@ -26,5 +26,6 @@ fn main() -> Result<()> {
         } => command::worktree::remove(&config, &branch, delete_branch, force_delete_branch),
         Commands::Init { shell } => command::shell::handle(&shell),
         Commands::Current => command::current::handle(),
+        Commands::Completion { shell } => command::completion::handle(shell),
     }
 }

@@ -45,6 +45,36 @@ eval "$(gwtree init bash)"
 eval (gwtree init fish)
 ```
 
+After adding the line, reload your shell configuration:
+```bash
+# For Bash
+source ~/.bashrc
+
+# For Zsh
+source ~/.zshrc
+
+# For Fish (or just restart the terminal)
+source ~/.config/fish/config.fish
+```
+
+### 3. Tab Completion
+
+The shell integration automatically includes tab completion. Once set up, you can:
+
+| Command | Action |
+|---------|--------|
+| `gwt <TAB>` | Show available commands (config, ls, sw, rm, etc.) |
+| `gwt sw <TAB>` | Show available worktree branches to switch to |
+| `gwt rm <TAB>` | Show available worktree branches to remove |
+| `gwt config <TAB>` | Show config subcommands (view, setup) |
+| `gwt init <TAB>` | Show available shells (bash, zsh, fish) |
+
+**Example:**
+```bash
+$ gwt sw f<TAB>
+feat/api-v2    feat/auth    fix-bug-123
+```
+
 ## Quick Start
 
 1. **Initialize**: Run `gwt` for the first time to set up your configuration.
@@ -194,7 +224,18 @@ $ gwt ls
 ---
 
 #### `gwtree init <shell>`
-Generates the shell integration code required for the `gwt` wrapper to function. This is typically used once during initial setup in your `.bashrc`, `.zshrc`, or `config.fish`. Supported shells: `bash`, `zsh`, `fish`.
+Generates the shell integration code required for the `gwt` wrapper to function, including tab completion. This is typically used once during initial setup in your `.bashrc`, `.zshrc`, or `config.fish`. Supported shells: `bash`, `zsh`, `fish`.
+
+---
+
+#### `gwtree completion <shell>`
+Generates static shell completion scripts using clap_complete with dynamic branch name suggestions. This is an alternative to the built-in completions from `gwtree init` for users who prefer to manage completion scripts separately. Supported shells: `bash`, `zsh`, `fish`.
+
+**Example:**
+```bash
+# Generate and source bash completions
+source <(gwtree completion bash)
+```
 
 ## Configuration
 
