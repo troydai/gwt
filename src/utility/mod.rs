@@ -34,7 +34,7 @@ impl Git {
         Ok(stdout.trim().to_string())
     }
 
-    pub fn list_worktrees(&self) -> Result<Vec<Worktree>> {
+    pub fn list_worktrees(&self) -> Result<Worktrees> {
         let output = self.run(&["worktree", "list", "--porcelain"])?;
         let stdout = String::from_utf8_lossy(&output.stdout);
         Ok(parse_porcelain(&stdout))
@@ -122,8 +122,8 @@ impl Git {
     }
 }
 
-pub(crate) fn parse_porcelain(input: &str) -> Vec<Worktree> {
-    let mut worktrees = Vec::new();
+pub(crate) fn parse_porcelain(input: &str) -> Worktrees {
+    let mut trees = Vec::new();
 
     let mut current_path: Option<PathBuf> = None;
     let mut current_head: Option<String> = None;
@@ -134,7 +134,7 @@ pub(crate) fn parse_porcelain(input: &str) -> Vec<Worktree> {
         if line.is_empty() {
             // finalize current block
             if let (Some(path), Some(head)) = (current_path.take(), current_head.take()) {
-                worktrees.push(Worktree {
+                trees.push(Worktree {
                     path,
                     head,
                     branch: current_branch.take(),
@@ -161,14 +161,14 @@ pub(crate) fn parse_porcelain(input: &str) -> Vec<Worktree> {
 
     // finalize last block if any
     if let (Some(path), Some(head)) = (current_path.take(), current_head.take()) {
-        worktrees.push(Worktree {
+        trees.push(Worktree {
             path,
             head,
             branch: current_branch.take(),
         });
     }
 
-    worktrees
+    Worktrees(trees)
 }
 
 /// Representation of a Git worktree
@@ -194,6 +194,53 @@ impl Worktree {
     /// Return branch name, if any
     pub fn branch(&self) -> Option<&str> {
         self.branch.as_deref()
+    }
+}
+
+pub struct Worktrees(Vec<Worktree>);
+
+impl Worktrees {
+    /// Sort worktrees by branch name alphabetically.
+    /// Detached worktrees (None) come after named branches.
+    pub fn sort_by_branch(&mut self) {
+        self.0.sort_by(|a, b| match (a.branch(), b.branch()) {
+            (Some(a_branch), Some(b_branch)) => a_branch.cmp(b_branch),
+            (Some(_), None) => std::cmp::Ordering::Less,
+            (None, Some(_)) => std::cmp::Ordering::Greater,
+            (None, None) => std::cmp::Ordering::Equal,
+        });
+    }
+}
+
+impl std::ops::Deref for Worktrees {
+    type Target = Vec<Worktree>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl std::ops::DerefMut for Worktrees {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl IntoIterator for Worktrees {
+    type Item = Worktree;
+    type IntoIter = std::vec::IntoIter<Worktree>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a Worktrees {
+    type Item = &'a Worktree;
+    type IntoIter = std::slice::Iter<'a, Worktree>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter()
     }
 }
 
@@ -629,6 +676,59 @@ fi
 
         unsafe {
             std::env::remove_var("GWT_GIT");
+        }
+    }
+
+    #[test]
+    fn test_worktrees_sorting_and_deref() {
+        let mut wts = Worktrees(vec![
+            Worktree {
+                path: PathBuf::from("/z"),
+                head: "h1".into(),
+                branch: Some("zebra".into()),
+            },
+            Worktree {
+                path: PathBuf::from("/d"),
+                head: "h2".into(),
+                branch: None,
+            },
+            Worktree {
+                path: PathBuf::from("/a"),
+                head: "h3".into(),
+                branch: Some("apple".into()),
+            },
+        ]);
+
+        // Test Deref (accessing .len() from Vec)
+        assert_eq!(wts.len(), 3);
+
+        wts.sort_by_branch();
+
+        // Check order: apple, zebra, None
+        assert_eq!(wts[0].branch(), Some("apple"));
+        assert_eq!(wts[1].branch(), Some("zebra"));
+        assert_eq!(wts[2].branch(), None);
+    }
+
+    #[test]
+    fn test_worktrees_into_iterator() {
+        let wts = Worktrees(vec![Worktree {
+            path: PathBuf::from("/a"),
+            head: "h1".into(),
+            branch: Some("b1".into()),
+        }]);
+
+        // Test IntoIterator for &Worktrees
+        let mut count = 0;
+        for wt in &wts {
+            assert_eq!(wt.branch(), Some("b1"));
+            count += 1;
+        }
+        assert_eq!(count, 1);
+
+        // Test IntoIterator for Worktrees (owned)
+        for wt in wts {
+            assert_eq!(wt.branch(), Some("b1"));
         }
     }
 }

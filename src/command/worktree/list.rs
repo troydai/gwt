@@ -13,12 +13,7 @@ pub fn list(config: &Config, full: bool, raw: bool) -> Result<()> {
 
     // Sort worktrees by branch name alphabetically
     // Detached worktrees (None) come after named branches
-    worktrees.sort_by(|a, b| match (a.branch(), b.branch()) {
-        (Some(a_branch), Some(b_branch)) => a_branch.cmp(b_branch),
-        (Some(_), None) => std::cmp::Ordering::Less,
-        (None, Some(_)) => std::cmp::Ordering::Greater,
-        (None, None) => std::cmp::Ordering::Equal,
-    });
+    worktrees.sort_by_branch();
 
     // Raw mode: output only branch names, one per line (for shell completion)
     if raw {
