@@ -11,6 +11,7 @@ pub struct Worktree {
     branch: Option<String>,
 }
 
+#[derive(Clone, Copy)]
 pub enum BranchRenderMode {
     Full,
     Truncated(usize),
@@ -54,7 +55,7 @@ impl Worktree {
             }
             BranchRenderMode::Truncated(width) => {
                 // truncates the branch name
-                let branch_name = if branch.len() < width {
+                let branch_name = if branch.len() <= width {
                     branch.to_string()
                 } else {
                     format!("{}..", &branch[..width - 2]) // TODO: I think this is wrong

@@ -26,20 +26,17 @@ pub fn list(config: &Config, full: bool, raw: bool) -> Result<()> {
     }
 
     let current_worktree = git.git_toplevel().ok();
-    let max_branch_width = worktrees.max_branch_width();
+    let render_option = if full {
+        BranchRenderMode::Full
+    } else {
+        let max_branch_width = worktrees.max_branch_width();
+        BranchRenderMode::Truncated(max_branch_width)
+    };
 
-    for wt in worktrees {
-        let output = if full {
-            wt.render(&current_worktree, BranchRenderMode::Full)
-        } else {
-            wt.render(
-                &current_worktree,
-                BranchRenderMode::Truncated(max_branch_width),
-            )
-        };
-
-        println!("{}", output);
-    }
+    worktrees
+        .iter()
+        .map(|wt| wt.render(&current_worktree, render_option))
+        .for_each(|s| println!("{}", s));
 
     Ok(())
 }
