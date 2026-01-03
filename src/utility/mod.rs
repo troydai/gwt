@@ -5,7 +5,7 @@ use std::{
 };
 
 mod worktree;
-pub use worktree::{BranchRenderMode, ListBranchMode, Worktree, Worktrees};
+pub use worktree::{BranchRenderMode, Worktree, Worktrees};
 
 pub struct Git {
     exec: String,

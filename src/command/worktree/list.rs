@@ -1,9 +1,6 @@
 use crate::config::Config;
-use crate::utility::{BranchRenderMode, Git, ListBranchMode};
+use crate::utility::{BranchRenderMode, Git};
 use anyhow::Result;
-
-const MAX_BRANCH_WIDTH: usize = 32;
-const DETACHED_BRANCH_PLACEHOLDER: &str = "(detached)";
 
 pub fn list(config: &Config, full: bool, raw: bool) -> Result<()> {
     config.ensure_worktree_root()?;
@@ -18,14 +15,18 @@ pub fn list(config: &Config, full: bool, raw: bool) -> Result<()> {
     if raw {
         // --raw is used for tab completion
         worktrees
-            .branches(ListBranchMode::Raw)
             .iter()
-            .for_each(|b| println!("{}", b));
+            .filter_map(|br| {
+                br.branch()
+                    .filter(|br| !br.is_empty())
+                    .map(|br| br.to_string())
+            })
+            .for_each(|s| println!("{}", s));
         return Ok(());
     }
 
     let current_worktree = git.git_toplevel().ok();
-    let max_branch_width = max_branch_width(full, &worktrees);
+    let max_branch_width = worktrees.max_branch_width();
 
     for wt in worktrees {
         let output = if full {
@@ -41,19 +42,6 @@ pub fn list(config: &Config, full: bool, raw: bool) -> Result<()> {
     }
 
     Ok(())
-}
-
-fn max_branch_width(full: bool, worktrees: &crate::utility::Worktrees) -> usize {
-    // Calculate the maximum branch name width for column alignment
-    // Cap at MAX_BRANCH_WIDTH characters unless --full is specified
-    let max_allowed: usize = if full { usize::MAX } else { MAX_BRANCH_WIDTH };
-
-    worktrees
-        .branches(ListBranchMode::Full(DETACHED_BRANCH_PLACEHOLDER))
-        .iter()
-        .map(|s| s.len().min(max_allowed))
-        .max()
-        .unwrap_or(0)
 }
 
 #[cfg(test)]

@@ -1,6 +1,8 @@
 use console::style;
 use std::path::PathBuf;
 
+const MAX_BRANCH_WIDTH: usize = 32;
+
 /// Representation of a Git worktree
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Worktree {
@@ -106,12 +108,21 @@ impl Worktrees {
                 .collect(),
             ListBranchMode::Full(default) => self
                 .iter()
-                .filter_map(|wt| {
+                .map(|wt| {
                     wt.branch()
-                        .map_or_else(|| Some(String::from(default)), |b| Some(String::from(b)))
+                        .map_or_else(|| String::from(default), String::from)
                 })
                 .collect(),
         }
+    }
+
+    pub fn max_branch_width(&self) -> usize {
+        self.0
+            .iter()
+            .map(|br| br.branch().map_or_else(|| "(detached)".len(), |s| s.len()))
+            .map(|l| l.min(MAX_BRANCH_WIDTH))
+            .max()
+            .unwrap_or(0)
     }
 }
 
@@ -202,5 +213,46 @@ mod tests {
         for wt in wts {
             assert_eq!(wt.branch(), Some("b1"));
         }
+    }
+
+    #[test]
+    fn test_worktree_render() {
+        console::set_colors_enabled(false);
+
+        let wt = Worktree {
+            path: PathBuf::from("/path/to/repo"),
+            head: "abc123456789".into(),
+            branch: Some("feature-branch".into()),
+        };
+
+        // Test Full mode
+        let full_output = wt.render(&None, BranchRenderMode::Full);
+        assert_eq!(full_output, "- abc1234 feature-branch\n  /path/to/repo");
+
+        // Test Truncated mode
+        let trunc_output = wt.render(&None, BranchRenderMode::Truncated(10));
+        // feature-branch is 14 chars, width is 10. Truncated to "feature-.." (8 chars + "..")
+        assert_eq!(trunc_output, "  abc1234 feature-.. /path/to/repo");
+
+        // Test active worktree
+        let active_output = wt.render(
+            &Some(PathBuf::from("/path/to/repo")),
+            BranchRenderMode::Full,
+        );
+        assert!(active_output.starts_with("*"));
+    }
+
+    #[test]
+    fn test_worktrees_branches() {
+        let wts = Worktrees(vec![
+            Worktree::new(PathBuf::from("/a"), "h1".into(), Some("b1".into())),
+            Worktree::new(PathBuf::from("/b"), "h2".into(), None),
+        ]);
+
+        let raw_branches = wts.branches(ListBranchMode::Raw);
+        assert_eq!(raw_branches, vec!["b1"]);
+
+        let full_branches = wts.branches(ListBranchMode::Full("none"));
+        assert_eq!(full_branches, vec!["b1", "none"]);
     }
 }
