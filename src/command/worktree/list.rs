@@ -1,9 +1,9 @@
 use crate::config::Config;
-use crate::utility::Git;
+use crate::utility::{BranchRenderMode, Git, ListBranchMode};
 use anyhow::Result;
-use console::style;
 
 const MAX_BRANCH_WIDTH: usize = 32;
+const DETACHED_BRANCH_PLACEHOLDER: &str = "(detached)";
 
 pub fn list(config: &Config, full: bool, raw: bool) -> Result<()> {
     config.ensure_worktree_root()?;
@@ -15,85 +15,45 @@ pub fn list(config: &Config, full: bool, raw: bool) -> Result<()> {
     // Detached worktrees (None) come after named branches
     worktrees.sort_by_branch();
 
-    // Raw mode: output only branch names, one per line (for shell completion)
     if raw {
-        for wt in worktrees {
-            if let Some(branch) = wt.branch() {
-                println!("{}", branch);
-            }
-        }
+        // --raw is used for tab completion
+        worktrees
+            .branches(ListBranchMode::Raw)
+            .iter()
+            .for_each(|b| println!("{}", b));
         return Ok(());
     }
 
-    // Detect the current worktree path (may fail if not in a git worktree)
     let current_worktree = git.git_toplevel().ok();
-
-    // Calculate the maximum branch name width for column alignment
-    // Cap at MAX_BRANCH_WIDTH characters unless --full is specified
-    let max_branch_width = worktrees
-        .iter()
-        .map(|wt| {
-            if full {
-                wt.branch().unwrap_or("(detached)").len()
-            } else {
-                wt.branch()
-                    .unwrap_or("(detached)")
-                    .len()
-                    .min(MAX_BRANCH_WIDTH)
-            }
-        })
-        .max()
-        .unwrap_or(0);
+    let max_branch_width = max_branch_width(full, &worktrees);
 
     for wt in worktrees {
-        let is_active = current_worktree.as_ref().is_some_and(|cw| cw == wt.path());
-
-        // Truncate commit hash to 7 characters
-        let head = wt.head();
-        let short_hash = &head[..7.min(head.len())];
-
-        // Truncate branch name or "(detached)" for detached HEAD
-        let branch_name = wt.branch().unwrap_or("(detached)");
-
-        // Truncate branch name at MAX_BRANCH_WIDTH characters unless --full is specified
-        let display_branch = if full || branch_name.len() <= MAX_BRANCH_WIDTH {
-            branch_name.to_string()
+        let output = if full {
+            wt.render(&current_worktree, BranchRenderMode::Full)
         } else {
-            format!("{}…", &branch_name[..MAX_BRANCH_WIDTH - 1])
+            wt.render(
+                &current_worktree,
+                BranchRenderMode::Truncated(max_branch_width),
+            )
         };
 
-        // Apply color styling: yellow for hash, green for branch
-        // Column order: marker, hash, branch, path
-        let styled_hash = style(short_hash).yellow();
-        let styled_branch = style(format!(
-            "{:<width$}",
-            display_branch,
-            width = max_branch_width
-        ))
-        .green();
-
-        // Format the marker and path
-        let marker = if is_active { "*" } else { " " };
-        let styled_path = style(wt.path().display()).cyan();
-
-        // Print with active worktree highlighted in bold
-        if is_active {
-            println!(
-                "{} {} {} {}",
-                style(marker).bold(),
-                style(styled_hash).bold(),
-                style(styled_branch).bold(),
-                style(styled_path).bold()
-            );
-        } else {
-            println!(
-                "{} {} {} {}",
-                marker, styled_hash, styled_branch, styled_path
-            );
-        }
+        println!("{}", output);
     }
 
     Ok(())
+}
+
+fn max_branch_width(full: bool, worktrees: &crate::utility::Worktrees) -> usize {
+    // Calculate the maximum branch name width for column alignment
+    // Cap at MAX_BRANCH_WIDTH characters unless --full is specified
+    let max_allowed: usize = if full { usize::MAX } else { MAX_BRANCH_WIDTH };
+
+    worktrees
+        .branches(ListBranchMode::Full(DETACHED_BRANCH_PLACEHOLDER))
+        .iter()
+        .map(|s| s.len().min(max_allowed))
+        .max()
+        .unwrap_or(0)
 }
 
 #[cfg(test)]
