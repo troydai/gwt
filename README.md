@@ -35,9 +35,14 @@ Because a subprocess cannot change the parent shell's working directory, GWT use
 
 Add the following to your shell configuration file (e.g., `~/.bashrc`, `~/.zshrc`, or `~/.config/fish/config.fish`):
 
-**Bash / Zsh:**
+**Bash:**
 ```bash
 eval "$(gwtree init bash)"
+```
+
+**Zsh:**
+```zsh
+eval "$(gwtree init zsh)"
 ```
 
 **Fish:**
