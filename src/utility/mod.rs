@@ -4,6 +4,9 @@ use std::{
     process::{Command, Output},
 };
 
+mod worktree;
+pub use worktree::{BranchRenderMode, Worktree, Worktrees};
+
 pub struct Git {
     exec: String,
 }
@@ -34,7 +37,7 @@ impl Git {
         Ok(stdout.trim().to_string())
     }
 
-    pub fn list_worktrees(&self) -> Result<Vec<Worktree>> {
+    pub fn list_worktrees(&self) -> Result<Worktrees> {
         let output = self.run(&["worktree", "list", "--porcelain"])?;
         let stdout = String::from_utf8_lossy(&output.stdout);
         Ok(parse_porcelain(&stdout))
@@ -49,11 +52,6 @@ impl Git {
 
     pub fn remote_branch_exists(&self, remote_branch: &str) -> Result<bool> {
         let ref_name = format!("refs/remotes/{remote_branch}");
-        // Git stores remote branches as references in 'refs/remotes/'.
-        // We use 'for-each-ref' to search for the specific full reference path.
-        // If the branch exists, 'for-each-ref' will print the reference name.
-        // If it doesn't exist, it will produce no output. This is more reliable
-        // than 'git branch -r' which is designed for human-readable output.
         let output = self.run(&["for-each-ref", "--format=%(refname)", &ref_name])?;
         let stdout = String::from_utf8_lossy(&output.stdout);
         Ok(stdout.lines().any(|line| line.trim() == ref_name))
@@ -122,8 +120,8 @@ impl Git {
     }
 }
 
-pub(crate) fn parse_porcelain(input: &str) -> Vec<Worktree> {
-    let mut worktrees = Vec::new();
+fn parse_porcelain(input: &str) -> Worktrees {
+    let mut trees = Vec::new();
 
     let mut current_path: Option<PathBuf> = None;
     let mut current_head: Option<String> = None;
@@ -134,11 +132,7 @@ pub(crate) fn parse_porcelain(input: &str) -> Vec<Worktree> {
         if line.is_empty() {
             // finalize current block
             if let (Some(path), Some(head)) = (current_path.take(), current_head.take()) {
-                worktrees.push(Worktree {
-                    path,
-                    head,
-                    branch: current_branch.take(),
-                });
+                trees.push(Worktree::new(path, head, current_branch.take()));
             }
             current_path = None;
             current_head = None;
@@ -161,40 +155,10 @@ pub(crate) fn parse_porcelain(input: &str) -> Vec<Worktree> {
 
     // finalize last block if any
     if let (Some(path), Some(head)) = (current_path.take(), current_head.take()) {
-        worktrees.push(Worktree {
-            path,
-            head,
-            branch: current_branch.take(),
-        });
+        trees.push(Worktree::new(path, head, current_branch.take()));
     }
 
-    worktrees
-}
-
-/// Representation of a Git worktree
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Worktree {
-    path: PathBuf,
-    head: String,
-    branch: Option<String>,
-}
-
-impl Worktree {
-    /// Return the worktree path
-    pub fn path(&self) -> &PathBuf {
-        &self.path
-    }
-
-    /// Return the head SHA
-    #[allow(dead_code)]
-    pub fn head(&self) -> &str {
-        &self.head
-    }
-
-    /// Return branch name, if any
-    pub fn branch(&self) -> Option<&str> {
-        self.branch.as_deref()
-    }
+    Worktrees::new(trees)
 }
 
 #[cfg(test)]
@@ -295,8 +259,6 @@ else
 fi
 "#;
         let (mock_git, _dir) = create_mock_git_script(script);
-        // We need to inject the mock git path.
-        // Since Git::new() reads from env, we can set env var.
         let _guard = ENV_LOCK.lock().unwrap();
         unsafe {
             std::env::set_var("GWT_GIT", &mock_git);
