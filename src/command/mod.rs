@@ -54,7 +54,12 @@ pub enum Commands {
     /// Remove a worktree by branch name
     Rm {
         /// Branch name of the worktree to remove
-        branch: String,
+        #[arg(required_unless_present = "this", conflicts_with = "this")]
+        branch: Option<String>,
+
+        /// Remove the worktree of the current directory (switches to home first)
+        #[arg(long = "this")]
+        this: bool,
 
         /// Delete the branch after removing the worktree
         #[arg(short = 'b', long = "delete-branch")]

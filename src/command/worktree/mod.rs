@@ -125,7 +125,8 @@ fn create_worktree_and_print_path(
 
 pub fn remove(
     config: &Config,
-    branch: &str,
+    branch: Option<&str>,
+    this: bool,
     delete_branch: bool,
     force_delete_branch: bool,
     skip_confirmation: bool,
@@ -133,16 +134,31 @@ pub fn remove(
     config.ensure_worktree_root()?;
 
     let git = Git::new();
+    let current_dir = env::current_dir().context("Failed to get current directory")?;
 
-    // Find the worktree for this branch
-    let worktree = git
-        .find_worktree_by_branch(branch)?
-        .ok_or_else(|| anyhow!("No worktree found for branch '{}'", branch))?;
+    // Resolve the worktree and branch name
+    let (worktree, branch_name) = if this {
+        // Find the worktree for the current directory
+        let wt = git
+            .find_worktree_by_path(&current_dir)?
+            .ok_or_else(|| anyhow!("Current directory is not in a worktree"))?;
+        let branch = wt
+            .branch()
+            .ok_or_else(|| anyhow!("Current worktree is in detached HEAD state"))?
+            .to_string();
+        (wt, branch)
+    } else {
+        // Find the worktree by branch name
+        let branch = branch.ok_or_else(|| anyhow!("Branch name is required"))?;
+        let wt = git
+            .find_worktree_by_branch(branch)?
+            .ok_or_else(|| anyhow!("No worktree found for branch '{}'", branch))?;
+        (wt, branch.to_string())
+    };
 
     let worktree_path = worktree.path();
 
     // Check if we're currently in the worktree being removed
-    let current_dir = env::current_dir().context("Failed to get current directory")?;
     let need_to_switch = current_dir.starts_with(worktree_path);
 
     // Get the main worktree path if we need to switch (but don't print yet)
@@ -157,7 +173,7 @@ pub fn remove(
         let prompt = format!(
             "Remove worktree at '{}' for branch '{}'?",
             worktree_path.display(),
-            branch
+            branch_name
         );
 
         let confirmed = Confirm::new()
@@ -173,7 +189,7 @@ pub fn remove(
     }
 
     // Print the main worktree path so the shell wrapper can cd to it (only after confirmation)
-    if let Some(path) = main_path {
+    if let Some(ref path) = main_path {
         println!("{}", path.display());
     }
 
@@ -185,13 +201,18 @@ pub fn remove(
     git.remove_worktree(worktree_path_str)
         .context("Failed to remove worktree")?;
 
-    eprintln!("Worktree for branch '{}' removed.", branch);
+    eprintln!("Worktree for branch '{}' removed.", branch_name);
 
     // Delete the branch if requested
     if delete_branch || force_delete_branch {
-        git.delete_branch(branch, force_delete_branch)
+        // If we removed the current worktree, we need to change to a valid directory
+        // before running git commands, as the current directory no longer exists
+        if let Some(ref path) = main_path {
+            env::set_current_dir(path).context("Failed to change to main worktree directory")?;
+        }
+        git.delete_branch(&branch_name, force_delete_branch)
             .context("Failed to delete branch")?;
-        eprintln!("Branch '{}' deleted.", branch);
+        eprintln!("Branch '{}' deleted.", branch_name);
     }
 
     Ok(())

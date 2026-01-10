@@ -118,6 +118,11 @@ impl Git {
             .into_iter()
             .find(|wt| wt.branch().is_some_and(|b| b == branch)))
     }
+
+    pub fn find_worktree_by_path(&self, path: &std::path::Path) -> Result<Option<Worktree>> {
+        let worktrees = self.list_worktrees()?;
+        Ok(worktrees.into_iter().find(|wt| path.starts_with(wt.path())))
+    }
 }
 
 fn parse_porcelain(input: &str) -> Worktrees {
