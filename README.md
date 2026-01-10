@@ -228,6 +228,18 @@ $ gwt ls
 
 ---
 
+#### `gwt home`
+
+Prints the absolute path to the main (home) worktree of the current repository. This is useful for scripts or for finding the root of the original repository without changing your current directory.
+
+**Example:**
+```bash
+$ gwt home
+/home/user/my-repo
+```
+
+---
+
 #### `gwtree init <shell>`
 Generates the shell integration code required for the `gwt` wrapper to function, including tab completion. This is typically used once during initial setup in your `.bashrc`, `.zshrc`, or `config.fish`. Supported shells: `bash`, `zsh`, `fish`.
 
