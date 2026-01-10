@@ -1,6 +1,7 @@
 pub mod completion;
 pub mod config;
 pub mod current;
+pub mod home;
 pub mod shell;
 pub mod worktree;
 
@@ -80,6 +81,9 @@ pub enum Commands {
         #[arg(value_enum)]
         shell: ShellType,
     },
+
+    /// Print the path to the home worktree (original repository)
+    Home,
 }
 
 #[derive(Clone, Copy, ValueEnum)]
