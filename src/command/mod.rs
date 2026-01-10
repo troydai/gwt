@@ -82,7 +82,7 @@ pub enum Commands {
         shell: ShellType,
     },
 
-    /// Print the path to the home worktree (original repository)
+    /// Switch to the home worktree (original repository)
     Home,
 }
 

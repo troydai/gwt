@@ -230,11 +230,14 @@ $ gwt ls
 
 #### `gwt home`
 
-Prints the absolute path to the main (home) worktree of the current repository. This is useful for scripts or for finding the root of the original repository without changing your current directory.
+Switches the current directory to the main (home) worktree of the current repository.
 
 **Example:**
 ```bash
+$ pwd
+/home/user/.gwt_store/a1b2c3d4
 $ gwt home
+$ pwd
 /home/user/my-repo
 ```
 
