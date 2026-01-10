@@ -128,6 +128,7 @@ pub fn remove(
     branch: &str,
     delete_branch: bool,
     force_delete_branch: bool,
+    skip_confirmation: bool,
 ) -> Result<()> {
     config.ensure_worktree_root()?;
 
@@ -151,22 +152,24 @@ pub fn remove(
         None
     };
 
-    // Request confirmation
-    let prompt = format!(
-        "Remove worktree at '{}' for branch '{}'?",
-        worktree_path.display(),
-        branch
-    );
+    // Request confirmation unless skipped
+    if !skip_confirmation {
+        let prompt = format!(
+            "Remove worktree at '{}' for branch '{}'?",
+            worktree_path.display(),
+            branch
+        );
 
-    let confirmed = Confirm::new()
-        .with_prompt(prompt)
-        .default(false)
-        .interact_on(&Term::stderr())
-        .context("Failed to get confirmation")?;
+        let confirmed = Confirm::new()
+            .with_prompt(prompt)
+            .default(false)
+            .interact_on(&Term::stderr())
+            .context("Failed to get confirmation")?;
 
-    if !confirmed {
-        eprintln!("Removal cancelled.");
-        return Ok(());
+        if !confirmed {
+            eprintln!("Removal cancelled.");
+            return Ok(());
+        }
     }
 
     // Print the main worktree path so the shell wrapper can cd to it (only after confirmation)

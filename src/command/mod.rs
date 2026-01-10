@@ -63,6 +63,10 @@ pub enum Commands {
         /// Force delete the branch (use -D instead of -d)
         #[arg(short = 'B', long = "force-delete-branch")]
         force_delete_branch: bool,
+
+        /// Skip confirmation prompt
+        #[arg(short = 'y', long = "yes")]
+        skip_confirmation: bool,
     },
 
     /// Output shell integration code for a given shell (bash, zsh, fish)
