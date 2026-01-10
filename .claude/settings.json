@@ -14,11 +14,13 @@
   },
   "permissions": {
     "allow": [
-      "Bash(cat :*)",
-      "Bash(git :*)",
-      "Bash(gh :*)",
-      "Bash(gwt :*)",
-      "Bash(gwtree :*)"
+      "Bash(cat *)",
+      "Bash(git *)",
+      "Bash(gh *)",
+      "Bash(gwt *)",
+      "Bash(gwtree *)",
+      "Bash(xargs:*)",
+	  "Bash(cargo *)"
     ]
   }
 }
