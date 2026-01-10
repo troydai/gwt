@@ -46,6 +46,26 @@ fn generate_init(shell: &str) -> Result<String> {
             printf "%s\n" "$result" >&2
             return $exit_code
         fi
+    elif [ "$1" = "home" ]; then
+        for arg in "$@"; do
+            if [ "$arg" = "--help" ] || [ "$arg" = "-h" ]; then
+                command gwtree "$@"
+                return
+            fi
+        done
+        local result
+        result=$(command gwtree home)
+        local exit_code=$?
+        if [ $exit_code -eq 0 ]; then
+            if [ -d "$result" ]; then
+                cd "$result" || return 1
+            else
+                printf "%s\n" "$result"
+            fi
+        else
+            printf "%s\n" "$result" >&2
+            return $exit_code
+        fi
     else
         command gwtree "$@"
     fi
@@ -59,7 +79,7 @@ _gwt_completions() {
     prev="${COMP_WORDS[COMP_CWORD-1]}"
 
     # Top-level commands
-    local commands="config ls sw rm init current completion"
+    local commands="config ls sw rm init current completion home"
 
     if [ "$COMP_CWORD" -eq 1 ]; then
         COMPREPLY=($(compgen -W "$commands" -- "$cur"))
@@ -129,6 +149,26 @@ complete -F _gwt_completions gwt
             printf "%s\n" "$result" >&2
             return $exit_code
         fi
+    elif [ "$1" = "home" ]; then
+        for arg in "$@"; do
+            if [ "$arg" = "--help" ] || [ "$arg" = "-h" ]; then
+                command gwtree "$@"
+                return
+            fi
+        done
+        local result
+        result=$(command gwtree home)
+        local exit_code=$?
+        if [ $exit_code -eq 0 ]; then
+            if [ -d "$result" ]; then
+                cd "$result" || return 1
+            else
+                printf "%s\n" "$result"
+            fi
+        else
+            printf "%s\n" "$result" >&2
+            return $exit_code
+        fi
     else
         command gwtree "$@"
     fi
@@ -145,6 +185,7 @@ _gwt() {
         'init:Output shell integration code'
         'current:Print current worktree and branch information'
         'completion:Generate shell completion scripts'
+        'home:Switch to the home worktree (original repository)'
     )
     shells=('bash' 'zsh' 'fish')
     config_commands=('view' 'setup')
@@ -207,6 +248,25 @@ compdef _gwt gwt
             printf "%s\n" $result >&2
             return $exit_code
         end
+    else if test "$argv[1]" = "home"
+        for arg in $argv
+            if test "$arg" = "--help" -o "$arg" = "-h"
+                command gwtree $argv
+                return
+            end
+        end
+        set result (command gwtree home)
+        set exit_code $status
+        if test $exit_code -eq 0
+            if test -d "$result"
+                cd "$result" || return 1
+            else
+                printf "%s\n" $result
+            end
+        else
+            printf "%s\n" $result >&2
+            return $exit_code
+        end
     else
         command gwtree $argv
     end
@@ -238,6 +298,7 @@ complete -c gwt -n '__gwt_needs_command' -a 'rm' -d 'Remove a worktree by branch
 complete -c gwt -n '__gwt_needs_command' -a 'init' -d 'Output shell integration code'
 complete -c gwt -n '__gwt_needs_command' -a 'current' -d 'Print current worktree and branch information'
 complete -c gwt -n '__gwt_needs_command' -a 'completion' -d 'Generate shell completion scripts'
+complete -c gwt -n '__gwt_needs_command' -a 'home' -d 'Switch to the home worktree (original repository)'
 
 # Branch completions for sw and rm
 complete -c gwt -n '__gwt_using_command sw' -a '(__gwt_branches)' -d 'branch'
