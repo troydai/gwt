@@ -297,5 +297,16 @@ cargo test
 cargo build --release
 ```
 
+## Claude Code Integration
+
+GWT includes a [Claude Code](https://docs.anthropic.com/en/docs/claude-code) skill that enables AI-assisted worktree management. When using Claude Code in a repository with GWT installed, Claude can help you:
+
+- Switch between branches and worktrees
+- Create new feature branches with isolated worktrees
+- Clean up merged branches and their worktrees
+- Navigate your worktree setup
+
+The skill is located at `.claude/skills/gwt/SKILL.md` and is automatically detected by Claude Code.
+
 ## License
 Distributed under the MIT License. See `LICENSE` for more information.
