@@ -153,13 +153,14 @@ $ gwt sw -m
 
 ---
 
-#### `gwt rm <branch> [-b|--delete-branch] [-B|--force-delete-branch]` (Remove)
+#### `gwt rm <branch> [--this] [-b|--delete-branch] [-B|--force-delete-branch] [-y|--yes]` (Remove)
 
 The `rm` (remove) command simplifies worktree removal by allowing you to specify branches instead of directory paths.
 
 - **Branch-Centric Workflow**: Specify the branch name to identify and remove its associated worktree, eliminating the need to remember or look up worktree directory paths.
+- **Remove Current Worktree**: Use `--this` to remove the worktree you're currently in. GWT will automatically detect the branch and switch you to the home worktree before deletion.
 - **Automatic Directory Switching**: If you're currently working inside the worktree being removed, GWT automatically switches you to the main worktree before deletion, preventing errors from deleting your current directory.
-- **Interactive Confirmation**: Prompts for confirmation before removing the worktree to prevent accidental deletions.
+- **Interactive Confirmation**: Prompts for confirmation before removing the worktree to prevent accidental deletions. Use `-y` or `--yes` to skip the confirmation prompt.
 - **Optional Branch Deletion**: Use `-b` or `--delete-branch` to delete the branch after removing the worktree. Use `-B` or `--force-delete-branch` for force deletion (equivalent to `git branch -D`).
 
 **Example:**
@@ -169,9 +170,14 @@ $ gwt rm feature-api-v2
 Remove worktree at '/Users/me/.gwt_store/a1b2c3d4e5f6g7h8' for branch 'feature-api-v2'? [y/N] y
 Worktree for branch 'feature-api-v2' removed.
 
-# Remove a worktree and delete the branch
-$ gwt rm feature-api-v2 -b
+# Remove the current worktree (automatically detects the branch)
+$ gwt rm --this
 Remove worktree at '/Users/me/.gwt_store/a1b2c3d4e5f6g7h8' for branch 'feature-api-v2'? [y/N] y
+Worktree for branch 'feature-api-v2' removed.
+# You are now in the home worktree
+
+# Remove a worktree and delete the branch (skip confirmation)
+$ gwt rm feature-api-v2 -B -y
 Worktree for branch 'feature-api-v2' removed.
 Branch 'feature-api-v2' deleted.
 

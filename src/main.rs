@@ -21,12 +21,14 @@ fn main() -> Result<()> {
         } => command::worktree::switch(&config, branch.as_deref(), create, main, remote.as_deref()),
         Commands::Rm {
             branch,
+            this,
             delete_branch,
             force_delete_branch,
             skip_confirmation,
         } => command::worktree::remove(
             &config,
-            &branch,
+            branch.as_deref(),
+            this,
             delete_branch,
             force_delete_branch,
             skip_confirmation,

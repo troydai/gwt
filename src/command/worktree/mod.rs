@@ -125,7 +125,8 @@ fn create_worktree_and_print_path(
 
 pub fn remove(
     config: &Config,
-    branch: &str,
+    branch: Option<&str>,
+    this: bool,
     delete_branch: bool,
     force_delete_branch: bool,
     skip_confirmation: bool,
@@ -134,9 +135,18 @@ pub fn remove(
 
     let git = Git::new();
 
+    // Resolve the branch name: either from argument or from current worktree
+    let branch = if this {
+        resolve_current_worktree_branch(&git)?
+    } else {
+        branch
+            .ok_or_else(|| anyhow!("Branch name is required"))?
+            .to_string()
+    };
+
     // Find the worktree for this branch
     let worktree = git
-        .find_worktree_by_branch(branch)?
+        .find_worktree_by_branch(&branch)?
         .ok_or_else(|| anyhow!("No worktree found for branch '{}'", branch))?;
 
     let worktree_path = worktree.path();
@@ -189,7 +199,7 @@ pub fn remove(
 
     // Delete the branch if requested
     if delete_branch || force_delete_branch {
-        git.delete_branch(branch, force_delete_branch)
+        git.delete_branch(&branch, force_delete_branch)
             .context("Failed to delete branch")?;
         eprintln!("Branch '{}' deleted.", branch);
     }
@@ -261,6 +271,22 @@ fn compute_worktree_hash(repo_name: &str, branch_name: &str) -> String {
     hasher.update(format!("{repo_name}|{branch_name}"));
     let digest = hasher.finalize();
     format!("{digest:x}")[0..16].to_string()
+}
+
+fn resolve_current_worktree_branch(git: &Git) -> Result<String> {
+    let current_dir = env::current_dir().context("Failed to get current directory")?;
+    let worktrees = git.list_worktrees()?;
+
+    // Find the worktree that contains the current directory
+    let worktree = worktrees
+        .into_iter()
+        .find(|wt| current_dir.starts_with(wt.path()))
+        .ok_or_else(|| anyhow!("Current directory is not inside a worktree"))?;
+
+    worktree
+        .branch()
+        .map(String::from)
+        .ok_or_else(|| anyhow!("Current worktree is in detached HEAD state"))
 }
 
 fn resolve_main_branch(git: &Git) -> Result<String> {
