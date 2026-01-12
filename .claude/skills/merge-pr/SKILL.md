@@ -23,67 +23,36 @@ When working in a gwt worktree, the standard `gh pr merge -sd` command is insuff
 
 ## Workflow Steps
 
-### Step 1: Pre-merge Safety Checks
+### Step 1: Pre-merge Checks
 
-Before proceeding, verify:
+Verify the current state and PR readiness:
 ```bash
 # Check current branch and worktree
 gwt current
 
-# Verify you're not in the home/main worktree
-# If gwt current shows you're on main/master in the home repo, STOP - this skill is not needed
+# Check PR status - ensure it's ready to merge
+gh pr view
 ```
 
 **STOP and ask for instructions if:**
 - You are in the home repository (not a feature worktree)
 - There are uncommitted changes (`git status` shows modifications)
-- The PR is not ready to merge (check with `gh pr view`)
+- The PR is not ready to merge (failed checks, missing approvals, etc.)
 
 ### Step 2: Merge the PR
 
-Merge the PR with squash, deleting only the remote branch:
+Merge with squash (do not delete branches yet):
 ```bash
-# Merge with squash, delete remote branch only (not local)
-gh pr merge --squash --delete-branch
+gh pr merge -s
 ```
 
-Note: `--delete-branch` only deletes the remote branch. The local branch remains because it's checked out.
+Once the merge succeeds, proceed with cleanup.
 
-### Step 3: Clean Up Worktree and Local Branch
+### Step 3: Remove Worktree and Switch Home
 
-Remove the current worktree and its branch, automatically switching to home:
+Remove the current worktree and switch back to home:
 ```bash
-# Remove current worktree and delete the local branch
-# This automatically switches to the home repository
-gwt rm --this -b -y
-```
-
-The `-b` flag deletes the local branch after removing the worktree.
-The `-y` flag skips confirmation since we've already merged.
-
-### Step 4: Sync Main Branch
-
-Pull the latest changes including the merged PR:
-```bash
-# Sync main branch and prune deleted remote branches
-git pull -p
-```
-
-## Complete Example
-
-```bash
-# 1. Verify current state
-gwt current
-# Output: Branch feature/my-feature @ Worktree /Users/me/.gwt_store/abc123
-
-# 2. Merge the PR (squash merge, delete remote branch)
-gh pr merge --squash --delete-branch
-
-# 3. Clean up worktree and local branch (switches to home automatically)
-gwt rm --this -b -y
-
-# 4. Sync main branch
-git pull -p
+gwt rm --this -y
 ```
 
 ## Error Handling
@@ -98,11 +67,6 @@ git pull -p
 - Check for uncommitted changes
 - Verify the worktree state with `gwt ls`
 - Ask user for instructions before attempting manual cleanup
-
-**If `git pull -p` fails:**
-- Check network connectivity
-- Verify remote is accessible
-- This is non-critical; the merge is already complete
 
 ## Important Notes
 
