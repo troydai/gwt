@@ -14,7 +14,7 @@ pub fn handle<W: io::Write>(shell: ShellType, writer: &mut W) -> Result<()> {
     print_completions(clap_shell, &mut Cli::command(), writer);
 
     // Print additional dynamic completion functions for branch suggestions
-    print_dynamic_completions(shell, writer);
+    print_dynamic_completions(shell, writer)?;
 
     Ok(())
 }
@@ -27,7 +27,7 @@ fn print_completions<G: Generator, W: io::Write>(
     generate(generator, cmd, cmd.get_name().to_string(), writer);
 }
 
-fn print_dynamic_completions<W: io::Write>(shell: ShellType, writer: &mut W) {
+fn print_dynamic_completions<W: io::Write>(shell: ShellType, writer: &mut W) -> io::Result<()> {
     match shell {
         ShellType::Bash => write!(
             writer,
@@ -56,8 +56,7 @@ _gwt_custom() {{
 
 complete -F _gwt_custom gwt
 "#
-        )
-        .unwrap(),
+        ),
         ShellType::Zsh => write!(
             writer,
             r#"
@@ -95,8 +94,7 @@ _gwt_wrapper() {{
     esac
 }}
 "#
-        )
-        .unwrap(),
+        ),
         ShellType::Fish => write!(
             writer,
             r#"
@@ -108,8 +106,7 @@ end
 # Complete branch names after 'gwt sw'
 complete -c gwt -n '__fish_seen_subcommand_from sw switch' -a '(__gwt_branches)' -d 'branch'
 "#
-        )
-        .unwrap(),
+        ),
     }
 }
 
