@@ -4,6 +4,34 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Added Claude Code skill (`.claude/skills/gwt/SKILL.md`) for AI-assisted worktree management.
+- Added Claude Code skill (`.claude/skills/merge-pr/SKILL.md`) for coordinated PR merging and worktree cleanup.
+
+## [0.5.1] - 2026-01-11
+
+### Fixed
+
+- Fixed version mismatch between Cargo.toml and git tags.
+
+## [0.5.0] - 2026-01-11
+
+### Added
+
+- Added `gwt home` command to quickly return to the main repository (original worktree).
+- Added `-y` / `--yes` flag to `gwt rm` command to skip interactive confirmation.
+
+### Changed
+
+- Improved `gwt ls` command rendering with better internal abstractions.
+- Updated README with separate initialization instructions for Bash and Zsh.
+
+### Internal
+
+- Refactored worktree management logic by extracting `Worktree` and `Worktrees` into a dedicated utility module.
+- Introduced `BranchRenderMode` for more flexible branch name rendering in the `list` command.
+
 ## [0.4.0] - 2026-01-02
 
 ### Added

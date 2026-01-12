@@ -57,7 +57,7 @@ pub enum Commands {
         #[arg(required_unless_present = "this", conflicts_with = "this")]
         branch: Option<String>,
 
-        /// Remove the worktree of the current directory (switches to home first)
+        /// Remove the current worktree (switches to home first)
         #[arg(long = "this")]
         this: bool,
 
