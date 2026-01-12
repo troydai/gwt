@@ -22,6 +22,7 @@ fn main() -> Result<()> {
         Commands::Rm {
             branch,
             this,
+            soft,
             delete_branch,
             force_delete_branch,
             skip_confirmation,
@@ -29,6 +30,7 @@ fn main() -> Result<()> {
             &config,
             branch.as_deref(),
             this,
+            soft,
             delete_branch,
             force_delete_branch,
             skip_confirmation,

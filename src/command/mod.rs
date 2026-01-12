@@ -61,6 +61,10 @@ pub enum Commands {
         #[arg(long = "this")]
         this: bool,
 
+        /// Keep the local branch (default behavior)
+        #[arg(long = "soft", conflicts_with_all = ["delete_branch", "force_delete_branch"])]
+        soft: bool,
+
         /// Delete the branch after removing the worktree
         #[arg(short = 'b', long = "delete-branch")]
         delete_branch: bool,

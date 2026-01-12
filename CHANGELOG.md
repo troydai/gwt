@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- Added `--soft` option to `gwt rm` command to remove a worktree while keeping the local branch (explicitly stating the default behavior).
 - Added Claude Code skill (`.claude/skills/gwt/SKILL.md`) for AI-assisted worktree management.
 - Added Claude Code skill (`.claude/skills/merge-pr/SKILL.md`) for coordinated PR merging and worktree cleanup.
 

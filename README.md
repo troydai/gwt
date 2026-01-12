@@ -153,12 +153,13 @@ $ gwt sw -m
 
 ---
 
-#### `gwt rm <branch> [--this] [-b|--delete-branch] [-B|--force-delete-branch] [-y|--yes]` (Remove)
+#### `gwt rm <branch> [--this] [--soft] [-b|--delete-branch] [-B|--force-delete-branch] [-y|--yes]` (Remove)
 
 The `rm` (remove) command simplifies worktree removal by allowing you to specify branches instead of directory paths.
 
 - **Branch-Centric Workflow**: Specify the branch name to identify and remove its associated worktree, eliminating the need to remember or look up worktree directory paths.
 - **Remove Current Worktree**: Use `--this` to remove the worktree you're currently in. GWT will automatically detect the branch and switch you to the home worktree before deletion.
+- **Soft Removal**: Use `--soft` to remove the worktree but keep the local branch (this is the default behavior, but the flag provides an explicit way to state it).
 - **Automatic Directory Switching**: If you're currently working inside the worktree being removed, GWT automatically switches you to the main worktree before deletion, preventing errors from deleting your current directory.
 - **Interactive Confirmation**: Prompts for confirmation before removing the worktree to prevent accidental deletions. Use `-y` or `--yes` to skip the confirmation prompt.
 - **Optional Branch Deletion**: Use `-b` or `--delete-branch` to delete the branch after removing the worktree. Use `-B` or `--force-delete-branch` for force deletion (equivalent to `git branch -D`).

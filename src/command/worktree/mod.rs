@@ -127,6 +127,7 @@ pub fn remove(
     config: &Config,
     branch: Option<&str>,
     this: bool,
+    _soft: bool,
     delete_branch: bool,
     force_delete_branch: bool,
     skip_confirmation: bool,
