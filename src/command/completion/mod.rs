@@ -4,33 +4,33 @@ use clap::CommandFactory;
 use clap_complete::{Generator, Shell, generate};
 use std::io;
 
-pub fn handle(shell: ShellType) -> Result<()> {
+pub fn handle<W: io::Write>(shell: ShellType, writer: &mut W) -> Result<()> {
     let clap_shell = match shell {
         ShellType::Bash => Shell::Bash,
         ShellType::Zsh => Shell::Zsh,
         ShellType::Fish => Shell::Fish,
     };
 
-    print_completions(clap_shell, &mut Cli::command());
+    print_completions(clap_shell, &mut Cli::command(), writer);
 
     // Print additional dynamic completion functions for branch suggestions
-    print_dynamic_completions(shell);
+    print_dynamic_completions(shell, writer)?;
 
     Ok(())
 }
 
-fn print_completions<G: Generator>(generator: G, cmd: &mut clap::Command) {
-    generate(
-        generator,
-        cmd,
-        cmd.get_name().to_string(),
-        &mut io::stdout(),
-    );
+fn print_completions<G: Generator, W: io::Write>(
+    generator: G,
+    cmd: &mut clap::Command,
+    writer: &mut W,
+) {
+    generate(generator, cmd, cmd.get_name().to_string(), writer);
 }
 
-fn print_dynamic_completions(shell: ShellType) {
+fn print_dynamic_completions<W: io::Write>(shell: ShellType, writer: &mut W) -> io::Result<()> {
     match shell {
-        ShellType::Bash => print!(
+        ShellType::Bash => write!(
+            writer,
             r#"
 # Dynamic completion for gwt sw command (branch names)
 _gwt_sw_completions() {{
@@ -57,7 +57,8 @@ _gwt_custom() {{
 complete -F _gwt_custom gwt
 "#
         ),
-        ShellType::Zsh => print!(
+        ShellType::Zsh => write!(
+            writer,
             r#"
 # Dynamic completion for gwt sw command (branch names)
 _gwt_branches() {{
@@ -94,7 +95,8 @@ _gwt_wrapper() {{
 }}
 "#
         ),
-        ShellType::Fish => print!(
+        ShellType::Fish => write!(
+            writer,
             r#"
 # Dynamic completion for gwt sw command (branch names)
 function __gwt_branches
@@ -114,17 +116,22 @@ mod tests {
 
     #[test]
     fn test_handle_bash() {
-        // Just ensure it doesn't panic
-        assert!(handle(ShellType::Bash).is_ok());
+        let mut buf = Vec::new();
+        assert!(handle(ShellType::Bash, &mut buf).is_ok());
+        assert!(!buf.is_empty());
     }
 
     #[test]
     fn test_handle_zsh() {
-        assert!(handle(ShellType::Zsh).is_ok());
+        let mut buf = Vec::new();
+        assert!(handle(ShellType::Zsh, &mut buf).is_ok());
+        assert!(!buf.is_empty());
     }
 
     #[test]
     fn test_handle_fish() {
-        assert!(handle(ShellType::Fish).is_ok());
+        let mut buf = Vec::new();
+        assert!(handle(ShellType::Fish, &mut buf).is_ok());
+        assert!(!buf.is_empty());
     }
 }
