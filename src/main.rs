@@ -35,7 +35,9 @@ fn main() -> Result<()> {
         ),
         Commands::Init { shell } => command::shell::handle(&shell),
         Commands::Current => command::current::handle(),
-        Commands::Completion { shell } => command::completion::handle(shell),
+        Commands::Completion { shell } => {
+            command::completion::handle(shell, &mut std::io::stdout())
+        }
         Commands::Home => command::home::handle(),
     }
 }
