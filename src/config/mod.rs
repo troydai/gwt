@@ -241,6 +241,7 @@ mod tests {
     fn test_config_omit_for_init() {
         let cmd = crate::command::Commands::Init {
             shell: "bash".to_string(),
+            non_interactive: false,
         };
         let home = PathBuf::from("/tmp");
         let config = load_with_home(&cmd, &home).unwrap();
