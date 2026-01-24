@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
 
 - Added Claude Code skill (`.claude/skills/gwt/SKILL.md`) for AI-assisted worktree management.
 - Added Claude Code skill (`.claude/skills/merge-pr/SKILL.md`) for coordinated PR merging and worktree cleanup.
+- Added `gwtree init --non-interactive` to output function-only shell integration without completions.
 
 ## [0.5.1] - 2026-01-11
 

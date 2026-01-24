@@ -45,6 +45,11 @@ eval "$(gwtree init bash)"
 eval "$(gwtree init zsh)"
 ```
 
+**Zsh (non-interactive, e.g. `~/.zprofile`):**
+```zsh
+eval "$(gwtree init zsh --non-interactive)"
+```
+
 **Fish:**
 ```fish
 eval (gwtree init fish)
@@ -79,6 +84,8 @@ The shell integration automatically includes tab completion. Once set up, you ca
 $ gwt sw f<TAB>
 feat/api-v2    feat/auth    fix-bug-123
 ```
+
+If you use `--non-interactive`, completion setup is skipped.
 
 ## Quick Start
 
@@ -251,6 +258,8 @@ $ pwd
 
 #### `gwtree init <shell>`
 Generates the shell integration code required for the `gwt` wrapper to function, including tab completion. This is typically used once during initial setup in your `.bashrc`, `.zshrc`, or `config.fish`. Supported shells: `bash`, `zsh`, `fish`.
+
+Use `--non-interactive` to output a function-only script without completion setup (useful for sourcing in non-interactive shells like `~/.zprofile`).
 
 ---
 

@@ -78,6 +78,10 @@ pub enum Commands {
     Init {
         /// Shell name
         shell: String,
+
+        /// Skip interactive completions (for non-interactive shells like zsh in .zprofile)
+        #[arg(long = "non-interactive")]
+        non_interactive: bool,
     },
 
     /// Print current worktree and branch information

@@ -33,7 +33,10 @@ fn main() -> Result<()> {
             force_delete_branch,
             skip_confirmation,
         ),
-        Commands::Init { shell } => command::shell::handle(&shell),
+        Commands::Init {
+            shell,
+            non_interactive,
+        } => command::shell::handle(&shell, non_interactive),
         Commands::Current => command::current::handle(),
         Commands::Completion { shell } => {
             command::completion::handle(shell, &mut std::io::stdout())

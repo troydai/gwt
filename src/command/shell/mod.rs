@@ -1,13 +1,15 @@
 use anyhow::{Result, anyhow};
 
-pub fn handle(shell: &str) -> Result<()> {
-    println!("{}", generate_init(shell)?);
+pub fn handle(shell: &str, non_interactive: bool) -> Result<()> {
+    println!("{}", generate_init(shell, non_interactive)?);
     Ok(())
 }
 
-fn generate_init(shell: &str) -> Result<String> {
+fn generate_init(shell: &str, non_interactive: bool) -> Result<String> {
     match shell {
-        "bash" => Ok(r#"gwt() {
+        "bash" => {
+            let mut output = String::from(
+                r#"gwt() {
     if [ "$1" = "switch" ] || [ "$1" = "sw" ]; then
         for arg in "$@"; do
             if [ "$arg" = "--help" ] || [ "$arg" = "-h" ]; then
@@ -70,6 +72,12 @@ fn generate_init(shell: &str) -> Result<String> {
         command gwtree "$@"
     fi
 }
+"#,
+            );
+
+            if !non_interactive {
+                output.push_str(
+                    r#"
 
 # Tab completion for gwt
 _gwt_completions() {
@@ -108,9 +116,15 @@ _gwt_completions() {
 }
 
 complete -F _gwt_completions gwt
-"#
-        .to_string()),
-        "zsh" => Ok(r#"gwt() {
+"#,
+                );
+            }
+
+            Ok(output)
+        }
+        "zsh" => {
+            let mut output = String::from(
+                r#"gwt() {
     if [ "$1" = "switch" ] || [ "$1" = "sw" ]; then
         for arg in "$@"; do
             if [ "$arg" = "--help" ] || [ "$arg" = "-h" ]; then
@@ -173,6 +187,12 @@ complete -F _gwt_completions gwt
         command gwtree "$@"
     fi
 }
+"#,
+            );
+
+            if !non_interactive {
+                output.push_str(
+                    r#"
 
 # Tab completion for gwt (zsh)
 _gwt() {
@@ -209,9 +229,15 @@ _gwt() {
 }
 
 compdef _gwt gwt
-"#
-        .to_string()),
-        "fish" => Ok(r#"function gwt
+"#,
+                );
+            }
+
+            Ok(output)
+        }
+        "fish" => {
+            let mut output = String::from(
+                r#"function gwt
     if test "$argv[1]" = "switch" -o "$argv[1]" = "sw"
         for arg in $argv
             if test "$arg" = "--help" -o "$arg" = "-h"
@@ -271,6 +297,11 @@ compdef _gwt gwt
         command gwtree $argv
     end
 end
+"#,
+            );
+
+            if !non_interactive {
+                output.push_str(r#"
 
 # Tab completion for gwt (fish)
 function __gwt_branches
@@ -310,8 +341,11 @@ complete -c gwt -n '__gwt_using_command completion' -a 'bash zsh fish'
 
 # Config subcommands
 complete -c gwt -n '__gwt_using_command config' -a 'view setup'
-"#
-        .to_string()),
+"#);
+            }
+
+            Ok(output)
+        }
         _ => Err(anyhow!(
             "Unsupported shell '{shell}'. Supported: bash, zsh, fish",
         )),
@@ -324,7 +358,7 @@ mod tests {
 
     #[test]
     fn generate_bash_init_contains_function() {
-        let s = generate_init("bash").unwrap();
+        let s = generate_init("bash", false).unwrap();
         assert!(s.contains("gwt() {"));
         assert!(s.contains("command gwtree"));
         assert!(s.contains(r#"[ "$1" = "switch" ] || [ "$1" = "sw" ]"#));
@@ -333,7 +367,7 @@ mod tests {
 
     #[test]
     fn generate_bash_init_contains_completion() {
-        let s = generate_init("bash").unwrap();
+        let s = generate_init("bash", false).unwrap();
         assert!(s.contains("_gwt_completions"));
         assert!(s.contains("complete -F _gwt_completions gwt"));
         assert!(s.contains("gwtree ls --raw"));
@@ -341,7 +375,7 @@ mod tests {
 
     #[test]
     fn generate_zsh_init_contains_function() {
-        let s = generate_init("zsh").unwrap();
+        let s = generate_init("zsh", false).unwrap();
         assert!(s.contains("gwt() {"));
         assert!(s.contains("command gwtree"));
         assert!(s.contains(r#"[ "$1" = "switch" ] || [ "$1" = "sw" ]"#));
@@ -350,15 +384,22 @@ mod tests {
 
     #[test]
     fn generate_zsh_init_contains_completion() {
-        let s = generate_init("zsh").unwrap();
+        let s = generate_init("zsh", false).unwrap();
         assert!(s.contains("_gwt()"));
         assert!(s.contains("compdef _gwt gwt"));
         assert!(s.contains("gwtree ls --raw"));
     }
 
     #[test]
+    fn generate_zsh_init_non_interactive_excludes_completion() {
+        let s = generate_init("zsh", true).unwrap();
+        assert!(!s.contains("_gwt()"));
+        assert!(!s.contains("compdef _gwt gwt"));
+    }
+
+    #[test]
     fn generate_fish_init_contains_function() {
-        let s = generate_init("fish").unwrap();
+        let s = generate_init("fish", false).unwrap();
         assert!(s.contains("function gwt"));
         assert!(s.contains("command gwtree"));
         assert!(s.contains(r#"test "$argv[1]" = "switch" -o "$argv[1]" = "sw""#));
@@ -367,7 +408,7 @@ mod tests {
 
     #[test]
     fn generate_fish_init_contains_completion() {
-        let s = generate_init("fish").unwrap();
+        let s = generate_init("fish", false).unwrap();
         assert!(s.contains("__gwt_branches"));
         assert!(s.contains("complete -c gwt"));
         assert!(s.contains("gwtree ls --raw"));
@@ -375,7 +416,7 @@ mod tests {
 
     #[test]
     fn generate_init_unsupported_shell() {
-        let result = generate_init("powershell");
+        let result = generate_init("powershell", false);
         assert!(result.is_err());
         assert_eq!(
             result.unwrap_err().to_string(),
