@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-01-24
+
 ### Added
 
 - Added Claude Code skill (`.claude/skills/gwt/SKILL.md`) for AI-assisted worktree management.
