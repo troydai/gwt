@@ -85,6 +85,8 @@ $ gwt sw f<TAB>
 feat/api-v2    feat/auth    fix-bug-123
 ```
 
+If you use `--non-interactive`, completion setup is skipped.
+
 ## Quick Start
 
 1. **Initialize**: Run `gwt` for the first time to set up your configuration.
