@@ -1,5 +1,14 @@
 # GWT: Git Worktree Management
 
+> ## 📢 This project has moved!
+>
+> **GWT is now hosted on Codeberg:**
+> ### ➡️ https://codeberg.org/troydai/gwt
+>
+> This GitHub repository is no longer actively maintained. All future development, issues, and pull requests should be directed to the new home on Codeberg. Please update your bookmarks, forks, and any references accordingly.
+>
+> _Thank you to everyone who has contributed or starred this project on GitHub!_
+
 [![CI](https://github.com/troydai/gwt/actions/workflows/ci.yml/badge.svg)](https://github.com/troydai/gwt/actions/workflows/ci.yml)
 
 GWT is a CLI tool designed to streamline Git worktree management. It provides a centralized, organized way to handle multiple concurrent work environments within a single repository, reducing the operational overhead of the native `git worktree` command set.
